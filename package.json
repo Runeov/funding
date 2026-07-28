@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "npm --prefix server run build",
+    "build": "echo 'Static site - no build needed'",
     "dev": "npm --prefix server run dev",
     "start": "npm --prefix server run start"
   }
