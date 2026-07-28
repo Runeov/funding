@@ -1,0 +1,61 @@
+{
+  "name": "KJ Genesis Funder Key #133",
+  "description": "One of 150 genesis access keys supporting the Project KJ proof-of-concept pilot. Ownership is the verifiable eligibility signal for founder-level ecosystem benefits, subject to published program terms and activation milestones.",
+  "image": "ipfs://REPLACE_WITH_IMAGE_CID/kj-genesis-funder-key-master.png",
+  "external_url": "https://project-kj.example/funders",
+  "attributes": [
+    {
+      "display_type": "number",
+      "trait_type": "Edition Number",
+      "value": 133,
+      "max_value": 150
+    },
+    {
+      "trait_type": "Edition",
+      "value": "133 / 150"
+    },
+    {
+      "trait_type": "Access Class",
+      "value": "Sovereign Core"
+    },
+    {
+      "trait_type": "Project",
+      "value": "Project KJ Proof of Concept"
+    },
+    {
+      "trait_type": "Utility State",
+      "value": "Seed Pool"
+    },
+    {
+      "trait_type": "Node Multiplier Eligibility",
+      "value": "1.5x"
+    },
+    {
+      "trait_type": "KJ Platform Commission Eligibility",
+      "value": "0%"
+    },
+    {
+      "trait_type": "Merchant Box Claim Eligibility",
+      "value": "1"
+    },
+    {
+      "trait_type": "Merchant Box Luck Eligibility",
+      "value": "2x Genesis & Global odds / KJ Pioneer minimum"
+    },
+    {
+      "trait_type": "Founder Pool Eligibility",
+      "value": "5% collective / pending activation"
+    },
+    {
+      "trait_type": "Hardware Priority",
+      "value": "First Wave"
+    }
+  ],
+  "properties": {
+    "collection": "KJ Genesis Funder Key",
+    "collection_size": 150,
+    "artwork_sha256": "5a1fc50ecc9ea926297e38824f1b86ae21b97910711d5a2664ab5fb7264cd331",
+    "utility_policy": "ipfs://REPLACE_WITH_POLICY_CID/funder-utility-policy.json",
+    "utility_status": "eligibility-subject-to-published-terms"
+  }
+}

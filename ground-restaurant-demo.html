@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Interactive 3D Krobjob Restaurant Flow Intelligence venue demo for privacy-first operations, capacity and sensor-mesh decisions.">
+  <title>Krobjob Restaurant Flow Intelligence — 3D Venue Demo</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #030707;
+      --panel: #081010;
+      --panel-2: #0d1717;
+      --line: #233433;
+      --line-hot: #3fbcb2;
+      --text: #edf8f6;
+      --muted: #879a98;
+      --cyan: #4be8dc;
+      --cyan-soft: rgba(75,232,220,.12);
+      --amber: #f6b65d;
+      --red: #ff746e;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+      min-width: 320px;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(75,232,220,.08), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    .shell { width: min(1500px, calc(100% - 32px)); margin: 0 auto; }
+    header {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { color: var(--text); font-size: 18px; font-weight: 850; letter-spacing: -.04em; text-decoration: none; }
+    .brand span { color: var(--cyan); }
+    .head-meta { display: flex; align-items: center; gap: 20px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+    .head-meta a { color: inherit; text-decoration: none; transition: color .16s; }
+    .head-meta a:hover { color: var(--text); }
+    .head-cta { padding: 10px 14px; border: 1px solid var(--line-hot); border-radius: 999px; color: var(--cyan) !important; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 6px rgba(75,232,220,.1), 0 0 24px var(--cyan); }
+    .intro {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 60px;
+      align-items: end;
+      padding: 62px 0 36px;
+    }
+    .kicker { margin-bottom: 17px; color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { max-width: 920px; margin: 0; font-size: clamp(48px, 6.5vw, 104px); line-height: .86; letter-spacing: -.075em; }
+    .intro-copy { max-width: 510px; justify-self: end; color: #a5b5b3; font-size: 17px; line-height: 1.55; }
+    .demo {
+      display: grid;
+      grid-template-columns: 270px minmax(500px, 1fr) 300px;
+      min-height: 720px;
+      margin-bottom: 46px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: 0 40px 120px rgba(0,0,0,.5);
+    }
+    .rail { padding: 22px; background: #070d0d; }
+    .rail.left { border-right: 1px solid var(--line); }
+    .rail.right { border-left: 1px solid var(--line); }
+    .rail-title { margin: 0 0 20px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .metric { padding: 20px 0; border-top: 1px solid var(--line); }
+    .metric:last-of-type { border-bottom: 1px solid var(--line); }
+    .metric strong { display: block; font-size: 36px; line-height: 1; letter-spacing: -.055em; }
+    .metric span { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; }
+    .metric strong[data-tone="cyan"] { color: var(--cyan); }
+    .scenario-list { display: grid; gap: 7px; margin-top: 26px; }
+    .scenario {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color .16s, background .16s, transform .16s;
+    }
+    .scenario:hover, .scenario[aria-pressed="true"] { border-color: var(--line-hot); background: var(--cyan-soft); }
+    .scenario:active { transform: translateY(1px); }
+    .scenario small { display: block; margin-top: 3px; color: var(--muted); }
+    .stage { position: relative; overflow: hidden; min-height: 720px; perspective: 1200px; background: #050b0b; cursor: grab; }
+    .stage:active { cursor: grabbing; }
+    #field { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .62; pointer-events: none; }
+    .view-switch {
+      position: absolute;
+      z-index: 9;
+      left: 16px;
+      top: 16px;
+      display: flex;
+      gap: 5px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(3,7,7,.8);
+      backdrop-filter: blur(12px);
+    }
+    .view-mode, .reset-view {
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .view-mode:hover, .view-mode[aria-pressed="true"] { background: var(--cyan-soft); color: var(--cyan); }
+    .reset-view { border-left: 1px solid var(--line); border-radius: 0 999px 999px 0; }
+    .reset-view:hover { color: var(--text); }
+    .world {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      width: min(780px, 82%);
+      aspect-ratio: 1.36;
+      transform-style: preserve-3d;
+      transform: translate(-50%,-50%) rotateX(var(--rx, 58deg)) rotateZ(var(--rz, -34deg)) scale(var(--zoom, .88));
+      transition: transform .12s ease-out;
+      z-index: 2;
+    }
+    .floor {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: 1.1fr .9fr .8fr;
+      grid-template-rows: 1fr .75fr .72fr;
+      gap: 8px;
+      padding: 9px;
+      border: 1px solid #38504e;
+      border-radius: 12px;
+      background: #0b1514;
+      box-shadow: 14px 18px 0 #020606, 20px 26px 50px rgba(0,0,0,.8);
+      transform-style: preserve-3d;
+    }
+    .zone {
+      position: relative;
+      overflow: hidden;
+      padding: 16px;
+      border: 1px solid #293938;
+      border-radius: 10px;
+      background: rgba(8,16,16,.72);
+      backdrop-filter: blur(5px);
+      transition: border-color .25s, background .25s, transform .25s;
+      transform-style: preserve-3d;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.015);
+    }
+    .zone::before, .zone::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      background: #172726;
+    }
+    .zone::before { left: 0; top: 0; width: 100%; height: 7px; transform-origin: top; transform: rotateX(-90deg); }
+    .zone::after { right: 0; top: 0; width: 7px; height: 100%; transform-origin: right; transform: rotateY(90deg); }
+    .zone[data-level="busy"] { border-color: #3a978f; background: rgba(18,67,63,.62); }
+    .zone[data-level="warning"] { border-color: #b57a35; background: rgba(81,51,18,.55); }
+    .zone[data-level="alert"] { border-color: var(--red); background: rgba(95,29,29,.48); animation: alertPulse 1.2s ease-in-out infinite; }
+    .zone-name { font-size: 13px; font-weight: 800; }
+    .zone-state { margin-top: 3px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .zone-count { position: absolute; left: 16px; bottom: 14px; font-size: clamp(26px, 3vw, 47px); font-weight: 800; letter-spacing: -.06em; }
+    .zone-count small { margin-left: 4px; color: var(--muted); font-size: 10px; font-weight: 500; letter-spacing: 0; }
+    .zone-bar { position: absolute; right: 14px; bottom: 16px; width: 42%; height: 3px; background: #1d2b2a; }
+    .zone-bar i { display: block; height: 100%; width: var(--load); background: var(--cyan); transition: width .5s ease; }
+    .furniture { position: absolute; inset: 35px 16px 48px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; transform-style: preserve-3d; pointer-events: none; }
+    .furniture i {
+      align-self: center;
+      justify-self: center;
+      width: 70%;
+      aspect-ratio: 1.35;
+      border: 1px solid #41524f;
+      border-radius: 3px;
+      background: #162220;
+      box-shadow: 4px 5px 0 #040808, 0 0 16px rgba(75,232,220,.035);
+      transform: translateZ(12px);
+    }
+    .furniture i:nth-child(3n) { background: #1a2927; }
+    .bar .furniture { grid-template-columns: 1fr; inset: 48px 18px 45px; }
+    .bar .furniture i { width: 78%; aspect-ratio: 2.6; }
+    .kitchen .furniture { grid-template-columns: 1fr 1fr; inset: 50px 14px 45px; }
+    .kitchen .furniture i { width: 84%; aspect-ratio: 1.9; background: #263331; }
+    .dispatch .furniture, .office .furniture, .entry .furniture { grid-template-columns: repeat(2,1fr); }
+    .zone-name, .zone-state, .zone-count, .zone-bar { z-index: 3; transform: translateZ(18px); }
+    .node {
+      position: absolute;
+      z-index: 4;
+      width: 14px;
+      height: 14px;
+      padding: 0;
+      border: 2px solid #05100f;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 0 5px rgba(75,232,220,.13), 0 0 22px rgba(75,232,220,.7);
+      cursor: pointer;
+      transform: translateZ(34px);
+    }
+    .node::after {
+      content: attr(data-id);
+      position: absolute;
+      left: 17px;
+      top: -3px;
+      color: #a9bcba;
+      font-size: 8px;
+      white-space: nowrap;
+    }
+    .node:hover, .node:focus-visible { outline: 1px solid white; outline-offset: 4px; }
+    .stage[data-view="capacity"] .furniture { opacity: .2; }
+    .stage[data-view="capacity"] .zone-count { color: var(--cyan); transform: translateZ(28px) scale(1.08); transform-origin: left bottom; }
+    .stage[data-view="capacity"] .zone-bar { height: 6px; box-shadow: 0 0 16px rgba(75,232,220,.35); }
+    .stage[data-view="mesh"] .floor { opacity: .42; }
+    .stage[data-view="mesh"] .node { transform: translateZ(48px) scale(1.35); }
+    .stage[data-view="mesh"] #field { opacity: 1; }
+    .n1{left:7%;top:13%}.n2{left:36%;top:9%}.n3{left:65%;top:13%}.n4{left:90%;top:20%}
+    .n5{left:14%;top:47%}.n6{left:48%;top:42%}.n7{left:78%;top:49%}.n8{left:92%;top:61%}
+    .n9{left:8%;top:83%}.n10{left:37%;top:91%}.n11{left:68%;top:85%}.n12{left:91%;top:88%}
+    .dining { grid-column: 1 / 3; grid-row: 1 / 2; }
+    .bar { grid-column: 3; grid-row: 1; }
+    .kitchen { grid-column: 1; grid-row: 2 / 4; }
+    .dispatch { grid-column: 2; grid-row: 2; }
+    .office { grid-column: 3; grid-row: 2; }
+    .entry { grid-column: 2 / 4; grid-row: 3; }
+    .timeline {
+      position: absolute;
+      left: 30px;
+      right: 30px;
+      bottom: 14px;
+      z-index: 6;
+      display: none;
+    }
+    .event-list { display: grid; gap: 9px; }
+    .event {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--panel-2);
+    }
+    .event[data-tone="amber"] { border-color: #7e592d; }
+    .event[data-tone="red"] { border-color: #753936; }
+    .event-time { color: var(--cyan); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .event h3 { margin: 6px 0 3px; font-size: 13px; }
+    .event p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .privacy {
+      margin-top: 24px;
+      padding: 16px;
+      border: 1px solid #245a56;
+      border-radius: 10px;
+      background: var(--cyan-soft);
+    }
+    .privacy strong { display: block; color: var(--cyan); font-size: 11px; }
+    .privacy p { margin: 8px 0 0; color: #98aaa8; font-size: 10px; line-height: 1.45; }
+    .control {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 20px 24px;
+      border-top: 1px solid var(--line);
+      background: #070d0d;
+    }
+    .play {
+      min-width: 94px;
+      min-height: 42px;
+      border: 1px solid var(--cyan);
+      border-radius: 999px;
+      background: var(--cyan);
+      color: #04100f;
+      font-weight: 850;
+      cursor: pointer;
+    }
+    .play:active { transform: translateY(1px); }
+    input[type="range"] { width: 100%; accent-color: var(--cyan); }
+    .clock { min-width: 70px; color: var(--cyan); font: 800 18px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
+    .node-detail {
+      position: fixed;
+      z-index: 30;
+      left: 50%;
+      bottom: 22px;
+      width: min(420px, calc(100% - 30px));
+      padding: 18px;
+      border: 1px solid var(--line-hot);
+      border-radius: 12px;
+      background: rgba(8,16,16,.95);
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      transform: translate(-50%, 150%);
+      transition: transform .25s ease;
+      backdrop-filter: blur(16px);
+    }
+    .node-detail.open { transform: translate(-50%, 0); }
+    .node-detail strong { color: var(--cyan); }
+    .node-detail p { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .explain {
+      display: grid;
+      grid-template-columns: .8fr 1.2fr;
+      gap: 100px;
+      padding: 110px 0 130px;
+      border-top: 1px solid var(--line);
+    }
+    .explain h2 { margin: 0; font-size: clamp(40px, 5vw, 76px); line-height: .95; letter-spacing: -.06em; }
+    .explain-list { display: grid; grid-template-columns: 1fr 1fr; }
+    .explain-list article { min-height: 180px; padding: 24px; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .explain-list b { color: var(--cyan); font-size: 11px; }
+    .explain-list h3 { margin: 34px 0 8px; font-size: 18px; }
+    .explain-list p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .productize { padding: 110px 0 130px; border-top: 1px solid var(--line); }
+    .product-head { display: grid; grid-template-columns: 1.15fr .85fr; gap: 70px; align-items: end; }
+    .product-head h2 { max-width: 880px; margin: 0; font-size: clamp(42px, 5.5vw, 82px); line-height: .92; letter-spacing: -.065em; }
+    .product-head p { max-width: 540px; margin: 0; color: #a5b5b3; font-size: 16px; line-height: 1.6; }
+    .build-grid { display: grid; grid-template-columns: repeat(3,1fr); margin-top: 62px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .build-card { min-height: 250px; padding: 26px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: rgba(8,16,16,.46); }
+    .build-card b { color: var(--cyan); font-size: 10px; letter-spacing: .12em; }
+    .build-card h3 { margin: 64px 0 10px; font-size: 22px; letter-spacing: -.03em; }
+    .build-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .commercial {
+      display: grid;
+      grid-template-columns: .82fr 1.18fr;
+      gap: 60px;
+      margin-top: 26px;
+      padding: 34px;
+      border: 1px solid #295e59;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg,rgba(75,232,220,.09),rgba(8,16,16,.82));
+    }
+    .commercial h3 { margin: 0 0 12px; font-size: 28px; letter-spacing: -.04em; }
+    .commercial-copy p { margin: 0 0 22px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .commercial-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+    .button {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 17px;
+      border: 1px solid var(--cyan);
+      border-radius: 999px;
+      background: var(--cyan);
+      color: #04100f;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .button.secondary { background: transparent; color: var(--text); border-color: var(--line-hot); }
+    .paths { display: grid; grid-template-columns: repeat(3,1fr); border-left: 1px solid var(--line); }
+    .path { padding: 4px 20px; border-right: 1px solid var(--line); }
+    .path b { display: block; color: var(--amber); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+    .path strong { display: block; margin: 12px 0 7px; font-size: 15px; }
+    .path span { display: block; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .price-note { margin-top: 16px !important; color: #718684 !important; font-size: 10px !important; }
+    footer { padding: 30px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .orbit-hint {
+      position: absolute;
+      z-index: 8;
+      right: 18px;
+      top: 16px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(3,7,7,.72);
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+    @keyframes alertPulse { 50% { box-shadow: inset 0 0 40px rgba(255,116,110,.15); } }
+    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; } }
+    @media (max-width: 1180px) {
+      .demo { grid-template-columns: 220px 1fr; }
+      .rail.right { grid-column: 1 / -1; display: grid; grid-template-columns: 140px 1fr 240px; gap: 20px; border-top: 1px solid var(--line); border-left: 0; }
+      .rail.right .rail-title { margin: 0; }
+      .event-list { grid-template-columns: repeat(3, 1fr); }
+      .privacy { margin-top: 0; }
+    }
+    @media (max-width: 820px) {
+      .intro, .explain, .product-head, .commercial { grid-template-columns: 1fr; gap: 28px; }
+      .intro-copy { justify-self: start; }
+      .demo { grid-template-columns: 1fr; }
+      .rail.left { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .rail.left .rail-title, .scenario-list { grid-column: 1 / -1; }
+      .scenario-list { grid-template-columns: repeat(3, 1fr); margin-top: 4px; }
+      .metric { padding: 14px 0; }
+      .stage { min-height: 620px; }
+      .rail.right { grid-template-columns: 1fr; }
+      .event-list { grid-template-columns: 1fr; }
+      .build-grid, .paths { grid-template-columns: 1fr; }
+      .build-card { min-height: 0; }
+      .build-card h3 { margin-top: 36px; }
+      .path { padding: 18px 0; border-right: 0; border-bottom: 1px solid var(--line); }
+    }
+    @media (max-width: 580px) {
+      .shell { width: min(100% - 20px, 1500px); }
+      header { min-height: 62px; }
+      .head-meta { gap: 9px; font-size: 9px; letter-spacing: .05em; }
+      .head-meta .context, .head-meta .project-link { display: none; }
+      .head-cta { padding: 9px 11px; }
+      .scenario-list { grid-template-columns: 1fr; }
+      .world { width: 91%; --zoom: .78; }
+      .floor { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(4, 1fr); }
+      .dining { grid-column: 1 / 3; grid-row: 1; }
+      .bar { grid-column: 2; grid-row: 2; }
+      .kitchen { grid-column: 1; grid-row: 2 / 4; }
+      .dispatch { grid-column: 2; grid-row: 3; }
+      .office { grid-column: 1; grid-row: 4; }
+      .entry { grid-column: 2; grid-row: 4; }
+      .zone-count { font-size: 24px; }
+      .zone-bar { display: none; }
+      .node::after { display: none; }
+      .control { grid-template-columns: 1fr auto; }
+      .control input { grid-column: 1 / -1; grid-row: 2; }
+      .explain-list { grid-template-columns: 1fr; }
+      .orbit-hint { display: none; }
+      .view-switch { left: 9px; right: 9px; overflow-x: auto; border-radius: 10px; }
+      .view-mode, .reset-view { flex: 1 0 auto; }
+      .productize { padding: 82px 0 90px; }
+      .commercial { padding: 24px 20px; }
+      .commercial-actions { display: grid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="shell">
+      <a class="brand" href="src_index.html#top" aria-label="Project KJ home">krobjob<span>.</span> ground</a>
+    <nav class="head-meta" aria-label="Demo navigation"><i class="live-dot" aria-hidden="true"></i><span class="context">Udon flagship restaurant</span><a class="project-link" href="ground-intelligence.html">Ground Intelligence</a><a class="head-cta" href="mailto:hei@krobjob.com?subject=Restaurant%20Flow%20Intelligence%20pilot">Request a pilot</a></nav>
+  </header>
+
+  <main>
+    <section class="shell intro">
+      <div><div class="kicker">Spatial operations intelligence</div><h1>Watch a restaurant think.</h1></div>
+      <p class="intro-copy">Play through a day, trigger operational scenarios and inspect the twelve sensing nodes. This demo shows what an owner sees after raw Wi‑Fi signals have been processed locally and reduced to privacy-safe events.</p>
+    </section>
+
+    <section class="shell">
+      <div class="demo">
+        <aside class="rail left">
+          <h2 class="rail-title">Live operating picture</h2>
+          <div class="metric"><strong id="people" data-tone="cyan">8–14</strong><span>coarse occupancy band</span></div>
+          <div class="metric"><strong id="activeZones">4/6</strong><span>zones active</span></div>
+          <div class="metric"><strong id="flowScore">82</strong><span>service-flow index · demo</span></div>
+          <div class="scenario-list" aria-label="Demo scenarios">
+            <button class="scenario" data-scenario="lunch" aria-pressed="true">Lunch service<small>Normal peak operation</small></button>
+            <button class="scenario" data-scenario="queue" aria-pressed="false">Queue pressure<small>Front-of-house bottleneck</small></button>
+            <button class="scenario" data-scenario="safety" aria-pressed="false">Safety signal<small>Human verification required</small></button>
+          </div>
+        </aside>
+
+        <div>
+          <div class="stage" id="stage" data-view="operations">
+            <canvas id="field" aria-hidden="true"></canvas>
+            <div class="view-switch" aria-label="3D venue view">
+              <button class="view-mode" data-view="operations" aria-pressed="true">Operations</button>
+              <button class="view-mode" data-view="capacity" aria-pressed="false">Capacity</button>
+              <button class="view-mode" data-view="mesh" aria-pressed="false">Sensor mesh</button>
+              <button class="reset-view" id="resetView" type="button">Reset 3D</button>
+            </div>
+            <span class="orbit-hint">Drag to orbit · wheel to zoom</span>
+            <div class="world" id="world">
+              <div class="floor">
+                <article class="zone dining" data-zone="dining"><div class="zone-name">Main dining</div><div class="zone-state">Active service</div><div class="furniture"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="zone-count">6–10 <small>people</small></div><div class="zone-bar"><i style="--load:72%"></i></div></article>
+                <article class="zone bar" data-zone="bar"><div class="zone-name">Bar</div><div class="zone-state">Steady</div><div class="furniture"><i></i><i></i></div><div class="zone-count">2–5 <small>people</small></div><div class="zone-bar"><i style="--load:46%"></i></div></article>
+                <article class="zone kitchen" data-zone="kitchen"><div class="zone-name">Kitchen</div><div class="zone-state">High activity</div><div class="furniture"><i></i><i></i><i></i><i></i></div><div class="zone-count">2–5 <small>people</small></div><div class="zone-bar"><i style="--load:84%"></i></div></article>
+                <article class="zone dispatch" data-zone="dispatch"><div class="zone-name">Dispatch</div><div class="zone-state">Active</div><div class="furniture"><i></i><i></i></div><div class="zone-count">1 <small>band</small></div><div class="zone-bar"><i style="--load:61%"></i></div></article>
+                <article class="zone office" data-zone="office"><div class="zone-name">Office</div><div class="zone-state">Available</div><div class="furniture"><i></i><i></i></div><div class="zone-count">0 <small>presence</small></div></article>
+                <article class="zone entry" data-zone="entry"><div class="zone-name">Entry + cashier</div><div class="zone-state">Flowing</div><div class="furniture"><i></i><i></i></div><div class="zone-count">2–5 <small>people</small></div><div class="zone-bar"><i style="--load:53%"></i></div></article>
+              </div>
+              <button class="node n1" data-id="N01" aria-label="Inspect sensing node N01"></button><button class="node n2" data-id="N02" aria-label="Inspect sensing node N02"></button>
+              <button class="node n3" data-id="N03" aria-label="Inspect sensing node N03"></button><button class="node n4" data-id="N04" aria-label="Inspect sensing node N04"></button>
+              <button class="node n5" data-id="N05" aria-label="Inspect sensing node N05"></button><button class="node n6" data-id="N06" aria-label="Inspect sensing node N06"></button>
+              <button class="node n7" data-id="N07" aria-label="Inspect sensing node N07"></button><button class="node n8" data-id="N08" aria-label="Inspect sensing node N08"></button>
+              <button class="node n9" data-id="N09" aria-label="Inspect sensing node N09"></button><button class="node n10" data-id="N10" aria-label="Inspect sensing node N10"></button>
+              <button class="node n11" data-id="N11" aria-label="Inspect sensing node N11"></button><button class="node n12" data-id="N12" aria-label="Inspect sensing node N12"></button>
+            </div>
+          </div>
+          <div class="control">
+            <button class="play" id="play">Pause day</button>
+            <input id="time" type="range" min="0" max="100" value="54" aria-label="Restaurant day timeline">
+            <output class="clock" id="clock">13:28</output>
+          </div>
+        </div>
+
+        <aside class="rail right">
+          <h2 class="rail-title">Owner signals</h2>
+          <div class="event-list" id="events">
+            <article class="event"><span class="event-time">13:26 · operational</span><h3>Dispatch recovered</h3><p>Queue pressure returned to the normal lunch-service band.</p></article>
+            <article class="event" data-tone="amber"><span class="event-time">13:18 · attention</span><h3>Kitchen load rising</h3><p>Activity increased while completed-order flow slowed.</p></article>
+            <article class="event"><span class="event-time">12:42 · utilization</span><h3>Private area unused</h3><p>Consider opening the zone only during the dinner window.</p></article>
+          </div>
+          <div class="privacy"><strong>Privacy filter active</strong><p>No names, faces, audio, exact movement histories, heart rate, breathing rate, pose or raw CSI leave this restaurant.</p></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="shell explain">
+      <div><div class="kicker">A Krobjob premium feature</div><h2>Built for decisions, not surveillance.</h2></div>
+      <div class="explain-list">
+        <article><b>01</b><h3>Plan the shift</h3><p>Compare aggregate activity patterns with orders to understand when the business actually needs capacity.</p></article>
+        <article><b>02</b><h3>Find the bottleneck</h3><p>See when service zones become overloaded or disconnected from order completion.</p></article>
+        <article><b>03</b><h3>Use space better</h3><p>Measure which zones are active before adding tables, equipment or another location.</p></article>
+        <article><b>04</b><h3>Verify safety</h3><p>Surface a possible anomaly for a person to check. The system never makes a medical or disciplinary decision.</p></article>
+      </div>
+    </section>
+
+    <section class="shell productize" id="offer">
+      <div class="product-head">
+        <div><div class="kicker">A sellable KrobJob location upgrade</div><h2>Turn a floor plan into an operations twin.</h2></div>
+        <p>KrobJob can configure this 3D venue view around a real restaurant, pair it with an on-site sensing layer, and connect validated operational events to the owner workflow. The result is a productized setup plus a recurring location service—not a surveillance feed.</p>
+      </div>
+
+      <div class="build-grid">
+        <article class="build-card"><b>01 · MAP</b><h3>Model the venue</h3><p>Convert the restaurant floor plan into an interactive 3D twin with named service zones, capacity bands and owner-defined workflows.</p></article>
+        <article class="build-card"><b>02 · SENSE</b><h3>Install the local layer</h3><p>Plan sensing-node positions, calibrate the radio baseline and keep raw Wi‑Fi signal processing on the business site.</p></article>
+        <article class="build-card"><b>03 · OPERATE</b><h3>Connect owner signals</h3><p>Bring privacy-safe activity, bottlenecks, utilization, safety verification and device health into the KrobJob operating picture.</p></article>
+      </div>
+
+      <div class="commercial">
+        <div class="commercial-copy">
+          <div class="kicker">Possible revenue model</div>
+          <h3>Deploy once. Serve every month.</h3>
+          <p>The pilot will establish the real hardware, installation and support cost before KrobJob publishes commercial pricing.</p>
+          <div class="commercial-actions">
+            <a class="button" href="mailto:hei@krobjob.com?subject=Restaurant%20Flow%20Intelligence%20pilot">Request restaurant pilot</a>
+            <a class="button secondary" href="ground-intelligence.html">Explore Ground Intelligence</a>
+          </div>
+          <p class="price-note">Pilot-stage capability. No pre-order or performance claim is made here; Thai PDPA and deployment governance review are required.</p>
+        </div>
+        <div class="paths" aria-label="Potential commercial paths">
+          <div class="path"><b>One-time</b><strong>Venue deployment</strong><span>Site survey, 3D twin, node plan, calibration and edge setup.</span></div>
+          <div class="path"><b>Recurring</b><strong>Location plan</strong><span>Owner overview, history, alerts, device health and support.</span></div>
+          <div class="path"><b>Upgrade</b><strong>Portfolio view</strong><span>Multi-location comparison, rollout controls and operating benchmarks.</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="node-detail" id="nodeDetail" role="status" aria-live="polite"><strong id="nodeName">Node N01</strong><p id="nodeCopy">ESP32-S3 · healthy · raw CSI processed locally · no cloud stream</p></div>
+  <footer><div class="shell">Interactive concept demonstration. Values are simulated and are not performance claims. Commercial deployment remains subject to field validation and Thai PDPA review.</div></footer>
+
+  <script>
+    (() => {
+      const scenarios = {
+        lunch: {
+          people: "8–14", zones: "4/6", score: "82",
+          data: { dining:["busy","Active service","6–10","72%"], bar:["busy","Steady","2–5","46%"], kitchen:["busy","High activity","2–5","84%"], dispatch:["busy","Active","1","61%"], office:["","Available","0","0%"], entry:["busy","Flowing","2–5","53%"] },
+          events: [["","13:26 · operational","Dispatch recovered","Queue pressure returned to the normal lunch-service band."],["amber","13:18 · attention","Kitchen load rising","Activity increased while completed-order flow slowed."],["","12:42 · utilization","Private area unused","Consider opening the zone only during the dinner window."]]
+        },
+        queue: {
+          people: "15–22", zones: "5/6", score: "58",
+          data: { dining:["busy","Near capacity","11–20","94%"], bar:["busy","High activity","6+","78%"], kitchen:["warning","Orders accumulating","6+","96%"], dispatch:["warning","Flow slowing","2–5","91%"], office:["","Available","0","0%"], entry:["warning","Queue pressure","6+","97%"] },
+          events: [["amber","13:41 · action suggested","Open second dispatch point","Entry pressure and kitchen completion have diverged for six minutes."],["amber","13:38 · queue","Waiting zone above band","Coarse occupancy moved into the six-plus band."],["","13:31 · context","Dining near capacity","Delay new seating or prepare the overflow area."]]
+        },
+        safety: {
+          people: "6–10", zones: "4/6", score: "—",
+          data: { dining:["busy","Active service","6–10","65%"], bar:["busy","Steady","2–5","41%"], kitchen:["alert","Possible anomaly","2–5","38%"], dispatch:["busy","Active","1","50%"], office:["","Available","0","0%"], entry:["busy","Flowing","2–5","47%"] },
+          events: [["red","13:52 · verify now","Possible safety anomaly","Abrupt motion followed by prolonged inactivity in the kitchen. Ask a person to check."],["","13:52 · privacy","No biometric export","The alert contains zone, time and reason only."],["","13:47 · system","All twelve nodes healthy","Local sensing and privacy filter are operating normally."]]
+        }
+      };
+      const $ = (s) => document.querySelector(s);
+      const $$ = (s) => [...document.querySelectorAll(s)];
+      const time = $("#time"), clock = $("#clock"), play = $("#play"), world = $("#world"), stage = $("#stage");
+      let playing = true, raf, last = 0;
+
+      function setClock(value) {
+        const minutes = Math.round(9 * 60 + value * 7.2);
+        clock.value = `${String(Math.floor(minutes/60)).padStart(2,"0")}:${String(minutes%60).padStart(2,"0")}`;
+      }
+      function renderScenario(name) {
+        const s = scenarios[name];
+        $("#people").textContent = s.people; $("#activeZones").textContent = s.zones; $("#flowScore").textContent = s.score;
+        Object.entries(s.data).forEach(([key,v]) => {
+          const z = document.querySelector(`[data-zone="${key}"]`);
+          z.dataset.level = v[0]; z.querySelector(".zone-state").textContent = v[1];
+          z.querySelector(".zone-count").innerHTML = `${v[2]} <small>${key === "office" ? "presence" : "people band"}</small>`;
+          const bar = z.querySelector(".zone-bar i"); if (bar) bar.style.setProperty("--load",v[3]);
+        });
+        $("#events").innerHTML = s.events.map(e => `<article class="event" ${e[0] ? `data-tone="${e[0]}"` : ""}><span class="event-time">${e[1]}</span><h3>${e[2]}</h3><p>${e[3]}</p></article>`).join("");
+        $$(".scenario").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scenario === name)));
+      }
+      function tick(ts) {
+        if (playing && ts-last > 150) {
+          time.value = (+time.value + .12) % 100; setClock(+time.value); last = ts;
+        }
+        raf = requestAnimationFrame(tick);
+      }
+      $$(".scenario").forEach(b => b.addEventListener("click", () => renderScenario(b.dataset.scenario)));
+      time.addEventListener("input", () => setClock(+time.value));
+      play.addEventListener("click", () => { playing = !playing; play.textContent = playing ? "Pause day" : "Play day"; });
+      $$(".node").forEach((node,i) => node.addEventListener("click", () => {
+        $("#nodeName").textContent = `Node ${node.dataset.id}`;
+        $("#nodeCopy").textContent = `ESP32-S3 · ${i % 4 === 0 ? "calibrating RF baseline" : "healthy"} · raw CSI processed locally · semantic events only`;
+        $("#nodeDetail").classList.add("open"); clearTimeout(node._timer);
+        node._timer = setTimeout(() => $("#nodeDetail").classList.remove("open"), 3200);
+      }));
+      $$(".view-mode").forEach(button => button.addEventListener("click", () => {
+        stage.dataset.view = button.dataset.view;
+        $$(".view-mode").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+      }));
+
+      let dragging = false, px = 0, py = 0, rx = 58, rz = -34, zoom = .88;
+      function applyView() {
+        world.style.setProperty("--rx", `${rx}deg`);
+        world.style.setProperty("--rz", `${rz}deg`);
+        world.style.setProperty("--zoom", zoom);
+        $$(".node").forEach(n => { n.style.setProperty("--rx", `${rx}deg`); n.style.setProperty("--rz", `${rz}deg`); });
+      }
+      $("#resetView").addEventListener("click", () => { rx = 58; rz = -34; zoom = .88; applyView(); });
+      stage.addEventListener("pointerdown", e => {
+        if (e.target.closest("button")) return;
+        dragging = true; px = e.clientX; py = e.clientY; stage.setPointerCapture(e.pointerId);
+      });
+      stage.addEventListener("pointermove", e => {
+        if (!dragging) return;
+        rz += (e.clientX-px)*.18; rx = Math.max(35,Math.min(72,rx-(e.clientY-py)*.12));
+        px=e.clientX; py=e.clientY; applyView();
+      });
+      stage.addEventListener("pointerup", () => dragging=false);
+      stage.addEventListener("pointercancel", () => dragging=false);
+      stage.addEventListener("wheel", e => {
+        e.preventDefault(); zoom=Math.max(.64,Math.min(1.12,zoom-e.deltaY*.0007)); applyView();
+      }, { passive:false });
+
+      const canvas = $("#field"), ctx = canvas.getContext("2d");
+      let phase = 0;
+      function draw() {
+        const dpr = Math.min(devicePixelRatio || 1, 2), rect = stage.getBoundingClientRect();
+        if (canvas.width !== rect.width*dpr || canvas.height !== rect.height*dpr) { canvas.width=rect.width*dpr; canvas.height=rect.height*dpr; }
+        ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,rect.width,rect.height);
+        const stageRect = stage.getBoundingClientRect();
+        const nodes = $$(".node").map(n => {
+          const r = n.getBoundingClientRect();
+          return {x:r.left-stageRect.left+r.width/2,y:r.top-stageRect.top+r.height/2};
+        });
+        nodes.forEach((a,idx) => nodes.slice(idx+1).forEach((b,j) => {
+          if ((idx+j)%3) return;
+          const grad=ctx.createLinearGradient(a.x,a.y,b.x,b.y); grad.addColorStop(0,"rgba(75,232,220,.04)"); grad.addColorStop(.5,"rgba(75,232,220,.24)"); grad.addColorStop(1,"rgba(75,232,220,.04)");
+          ctx.strokeStyle=grad; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y);
+          const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + Math.sin(phase+idx)*18; ctx.quadraticCurveTo(mx,my,b.x,b.y); ctx.stroke();
+        }));
+        nodes.forEach((n,i) => { for(let r=20;r<90;r+=22){ctx.strokeStyle=`rgba(75,232,220,${.09-r/1400})`;ctx.beginPath();ctx.arc(n.x,n.y,r+Math.sin(phase+i)*3,0,Math.PI*2);ctx.stroke();} });
+        phase += .012; requestAnimationFrame(draw);
+      }
+      setClock(+time.value); renderScenario("lunch"); applyView(); raf=requestAnimationFrame(tick); requestAnimationFrame(draw);
+    })();
+  </script>
+</body>
+</html>

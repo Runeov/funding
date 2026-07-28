@@ -1,0 +1,9 @@
+artifacts/
+cache/
+out/
+broadcast/
+coverage/
+typechain-types/
+deployments/
+allowlist/
+.env

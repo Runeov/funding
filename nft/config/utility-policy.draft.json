@@ -1,0 +1,68 @@
+{
+  "document": "KJ Genesis Funder Key Utility Policy",
+  "version": "draft-0.1",
+  "status": "DRAFT_NOT_ACTIVE",
+  "collectionSupply": 150,
+  "eligibilitySignal": "Current ERC-721 ownership unless a benefit is explicitly marked as token-consumable.",
+  "benefits": [
+    {
+      "id": "seed-pool-participation",
+      "description": "Eligibility for an equal per-token share of a proposed 5% founder pool funded from specifically defined Merchant Mystery Box mint and node-upgrade receipts.",
+      "mechanic": "Epoch snapshot and claim; exact gross/net basis, currencies, exclusions, taxes, custody, timing, and buyer jurisdictions must be defined before activation.",
+      "status": "REQUIRES_LEGAL_AND_ECONOMIC_APPROVAL"
+    },
+    {
+      "id": "node-yield-multiplier",
+      "description": "1.5x Project KJ node reward multiplier while the operating wallet verifies current ownership.",
+      "mechanic": "Continuous ownership check; cannot stack with another Funder Key unless future published terms explicitly allow it.",
+      "status": "PLANNED"
+    },
+    {
+      "id": "merchant-platform-fee-tier",
+      "description": "Zero Project KJ platform commission for eligible marketplace activities while ownership is verified.",
+      "mechanic": "Continuous ownership check; payment-network fees, gas, taxes, chargebacks, third-party fees, and legally required deductions are excluded.",
+      "status": "PLANNED"
+    },
+    {
+      "id": "merchant-box-claim",
+      "description": "One Merchant Mystery Box claim per Funder token ID.",
+      "mechanic": "Token-consumable entitlement recorded by token ID; transfer after a claim does not restore it.",
+      "status": "PLANNED"
+    },
+    {
+      "id": "merchant-box-luck",
+      "description": "Proposed doubled KJ Genesis and KJ Global draw weight, with KJ Pioneer as the minimum tier for an eligible Funder claim.",
+      "mechanic": "Must be enforced and publicly testable in the future VRF-backed Merchant Box contract; exact probability table must be published before sale.",
+      "status": "PLANNED"
+    },
+    {
+      "id": "iota-hardware-priority",
+      "description": "Priority invitation for the first Project KJ IOTA-compatible pilot hardware wave.",
+      "mechanic": "Token-consumable reservation; shipping territory, identity, duties, taxes, availability, and delivery terms remain to be published.",
+      "status": "PLANNED"
+    }
+  ],
+  "milestones": [
+    {
+      "phase": 1,
+      "walletLabel": "Funder Status Verified — Seed Pool Eligibility Recorded",
+      "status": "CURRENT"
+    },
+    {
+      "phase": 2,
+      "walletLabel": "Merchant Box Luck Multiplier Unlocked",
+      "status": "LOCKED"
+    },
+    {
+      "phase": 3,
+      "walletLabel": "Physical IoT Relay Gateway Unlocked",
+      "status": "LOCKED"
+    },
+    {
+      "phase": 4,
+      "walletLabel": "Sovereign Protocol Utility & Governance Key Decrypted",
+      "status": "LOCKED"
+    }
+  ],
+  "disclaimer": "This draft is an implementation specification, not an offer, promise of profit, security, prospectus, or final program terms."
+}

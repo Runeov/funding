@@ -1,0 +1,17 @@
+# Secrets - NEVER commit (this repo holds money/legal; a leaked .env is a breach)
+.env
+.env.*
+!.env.example
+
+# Dependencies (regenerate with `npm install`)
+node_modules/
+
+# Build / tooling output
+.next/
+dist/
+build/
+*.tsbuildinfo
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db

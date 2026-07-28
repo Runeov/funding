@@ -1,0 +1,30 @@
+{
+  "name": "@project-kj/genesis-funder-key",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fixed-supply KJ Genesis Funder Key NFT collection.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "forge build",
+    "build:production": "forge build",
+    "check": "npm run metadata:check && npm run allowlist:generate && npm run allowlist:check && npm run scripts:check && npm run format:check && npm run build:production && npm test",
+    "deploy:target": "npm run release:check && npm run build:production && node scripts/deploy.mjs",
+    "metadata:generate": "node scripts/generate-metadata.mjs",
+    "metadata:check": "node scripts/check-metadata.mjs",
+    "allowlist:generate": "node scripts/generate-allowlist.mjs",
+    "allowlist:check": "node scripts/check-allowlist.mjs",
+    "scripts:check": "node --check scripts/deploy.mjs && node --check scripts/check-release.mjs && node --check scripts/generate-allowlist.mjs && node --check mint-config.js",
+    "format:check": "forge fmt --check",
+    "release:check": "node scripts/check-release.mjs",
+    "sizes": "forge build --sizes",
+    "test": "forge test"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "5.6.1",
+    "ethers": "6.17.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

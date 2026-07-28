@@ -1,0 +1,273 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Chain {
+  BITCOIN
+  DOGECOIN
+}
+
+enum ChainNetwork {
+  MAINNET
+}
+
+enum AddressType {
+  P2PKH
+  P2WPKH
+}
+
+enum AddressPurpose {
+  USER_RECEIVE
+  ORDER_DEPOSIT
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT
+  PAID
+  RESERVED
+  FULFILLED
+  CANCELLED
+  REVIEW
+}
+
+enum PaymentStatus {
+  AWAITING
+  PARTIAL
+  CONFIRMING
+  PAID
+  EXPIRED
+  REORGED
+  CANCELLED
+  REVIEW
+}
+
+enum ChainTransactionStatus {
+  UNKNOWN
+  MEMPOOL
+  CONFIRMED
+  ORPHANED
+  DROPPED
+  CONFLICTED
+}
+
+enum SettlementStatus {
+  ACTIVE
+  REVERSED
+}
+
+model User {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  externalId String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  wallets Wallet[]
+  orders  Order[]
+}
+
+model HdAccount {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  keyRef            String       @unique
+  xpubHash          String
+  masterFingerprint String
+  accountPath       String
+  chain             Chain
+  network           ChainNetwork
+  addressType       AddressType
+  nextExternalIndex BigInt       @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  wallets  Wallet[]
+  addresses DerivedAddress[]
+
+  @@unique([chain, network, keyRef])
+}
+
+model Wallet {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  hdAccountId String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  hdAccount HdAccount        @relation(fields: [hdAccountId], references: [id], onDelete: Restrict)
+  addresses DerivedAddress[]
+
+  @@unique([userId, hdAccountId])
+}
+
+model DerivedAddress {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hdAccountId     String         @db.Uuid
+  walletId        String?        @db.Uuid
+  chain           Chain
+  network         ChainNetwork
+  purpose         AddressPurpose
+  branch          Int            @default(0)
+  derivationIndex Int
+  derivationPath  String
+  address         String
+  publicKeyHex    String
+  createdAt       DateTime       @default(now())
+  retiredAt       DateTime?
+
+  hdAccount     HdAccount         @relation(fields: [hdAccountId], references: [id], onDelete: Restrict)
+  wallet        Wallet?           @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  paymentIntent PaymentIntent?
+  utxos         ObservedUtxo[]
+
+  @@unique([hdAccountId, branch, derivationIndex])
+  @@unique([chain, network, address])
+  @@index([walletId, purpose])
+}
+
+model Order {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  externalOrderId String      @unique
+  requestHash     String
+  userId          String      @db.Uuid
+  itemRef         String
+  status          OrderStatus @default(AWAITING_PAYMENT)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  paymentIntent PaymentIntent?
+}
+
+model PaymentIntent {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId               String        @unique @db.Uuid
+  depositAddressId      String        @unique @db.Uuid
+  expectedAtomic        BigInt
+  requiredConfirmations Int           @default(3)
+  status                PaymentStatus @default(AWAITING)
+  observedAtomic        BigInt        @default(0)
+  confirmedAtomic       BigInt        @default(0)
+  stateVersion          Int           @default(0)
+  settlementEpoch       Int           @default(0)
+  lastEvaluatedTipHash  String?
+  lastScannedAt         DateTime?
+  monitorUntil          DateTime
+  expiresAt             DateTime?
+  paidAt                DateTime?
+  reorgedAt             DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  order          Order               @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  depositAddress DerivedAddress      @relation(fields: [depositAddressId], references: [id], onDelete: Restrict)
+  utxos          ObservedUtxo[]
+  settlements    PaymentSettlement[]
+
+  @@index([status, expiresAt])
+  @@index([monitorUntil, lastScannedAt])
+}
+
+model ChainCursor {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chain      Chain
+  network    ChainNetwork
+  tipHash    String?
+  tipHeight  Int?
+  leaseOwner String?      @db.Uuid
+  leaseUntil DateTime?
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([chain, network])
+  @@index([leaseUntil])
+}
+
+model ChainTransaction {
+  id                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chain              Chain
+  network            ChainNetwork
+  txid               String
+  status             ChainTransactionStatus
+  currentBlockHash   String?
+  currentBlockHeight Int?
+  firstSeenAt        DateTime               @default(now())
+  lastSeenAt         DateTime
+  updatedAt          DateTime               @updatedAt
+
+  inclusions TxInclusion[]
+  utxos      ObservedUtxo[]
+
+  @@unique([chain, network, txid])
+  @@index([status, lastSeenAt])
+}
+
+model TxInclusion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId String   @db.Uuid
+  blockHash     String
+  blockHeight   Int
+  canonical     Boolean  @default(true)
+  firstSeenAt   DateTime @default(now())
+  orphanedAt    DateTime?
+
+  transaction ChainTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+
+  @@unique([transactionId, blockHash])
+  @@index([canonical, blockHeight])
+}
+
+model ObservedUtxo {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId   String   @db.Uuid
+  vout            Int
+  addressId       String   @db.Uuid
+  paymentIntentId String?  @db.Uuid
+  amountAtomic    BigInt
+  firstSeenAt     DateTime @default(now())
+  lastSeenAt      DateTime
+
+  transaction   ChainTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  address       DerivedAddress   @relation(fields: [addressId], references: [id], onDelete: Restrict)
+  paymentIntent PaymentIntent?   @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
+
+  @@unique([transactionId, vout])
+  @@index([paymentIntentId])
+  @@index([addressId])
+}
+
+model PaymentSettlement {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentIntentId   String           @db.Uuid
+  epoch             Int
+  amountAtomic      BigInt
+  status            SettlementStatus @default(ACTIVE)
+  qualifiedTipHash  String
+  qualifiedAtHeight Int
+  createdAt         DateTime         @default(now())
+  reversedAt        DateTime?
+  reversalTipHash   String?
+
+  paymentIntent PaymentIntent @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentIntentId, epoch])
+  @@index([paymentIntentId, status])
+}
+
+model OutboxEvent {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventKey      String   @unique
+  topic         String
+  aggregateId   String
+  payload       Json
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now())
+  leaseToken    String?  @db.Uuid
+  leaseUntil    DateTime?
+  publishedAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([publishedAt, nextAttemptAt])
+  @@index([leaseUntil])
+}

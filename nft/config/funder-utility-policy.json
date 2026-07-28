@@ -1,0 +1,127 @@
+{
+  "policy": "KJ Genesis Funder Key Utility Policy",
+  "version": "0.1-draft",
+  "status": "not-active",
+  "collectionSupply": 150,
+  "ownershipRule": "Eligibility follows the wallet that owns a valid KJ Genesis Funder Key at the applicable verification or snapshot time.",
+  "important": "This draft records intended product utility. It is not an offer, contract, guarantee of return, or substitute for final legal terms.",
+  "fundingPlan": {
+    "status": "planned",
+    "currency": "USD target equivalent",
+    "stages": [
+      {
+        "stage": 1,
+        "name": "Proof-of-Concept Pilot",
+        "target": 15000,
+        "purpose": "Run the first Project KJ field pilot and prove the concept works.",
+        "fundingMechanism": "Up to 150 Genesis Funder Keys at a $100 target price before fees and taxes."
+      },
+      {
+        "stage": 2,
+        "name": "Udon Thani Expansion",
+        "target": 62000,
+        "purpose": "Fund the planned expansion across Udon Thani.",
+        "gate": "Opens only after the proof-of-concept pilot reaches its published success criteria."
+      },
+      {
+        "stage": 3,
+        "name": "Bangkok and Token-Launch Preparation",
+        "target": 240000,
+        "purpose": "Prepare the regulated token launch and Bangkok rollout.",
+        "gate": "Opens only after Udon Thani expansion milestones and required legal and regulatory approvals."
+      }
+    ],
+    "important": "Stages 2 and 3 are separate conditional raises. The Genesis NFT does not itself grant equity or represent a share of those financing rounds."
+  },
+  "benefits": [
+    {
+      "id": "founder-vault",
+      "name": "Funder Vault",
+      "status": "design-ready",
+      "rule": "Display a dedicated founder slot and current utility state after live ERC-721 ownership verification."
+    },
+    {
+      "id": "node-multiplier",
+      "name": "Node yield multiplier eligibility",
+      "status": "planned",
+      "rule": "Apply 1.5x to an eligible holder's active merchant-tier node yield after the node program and its terms are live.",
+      "exclusions": [
+        "No yield accrues before node activation.",
+        "The NFT contract does not calculate or pay yield.",
+        "Anti-abuse, suspension, tax, and jurisdiction rules remain to be defined."
+      ]
+    },
+    {
+      "id": "zero-platform-commission",
+      "name": "Zero KJ platform commission eligibility",
+      "status": "planned",
+      "rule": "Charge 0% KJ commission on eligible inventory sales, campaign tools, and token-routing services while ownership and merchant eligibility are valid.",
+      "exclusions": [
+        "Taxes, payment-processor, blockchain, logistics, insurance, and third-party fees are not KJ platform commission.",
+        "Merchant misconduct or prohibited activity may suspend program eligibility under published terms."
+      ]
+    },
+    {
+      "id": "merchant-box-claim",
+      "name": "Merchant Mystery Box claim",
+      "status": "planned",
+      "rule": "One free claim or guaranteed allocation per token ID, protected by an on-chain or auditable consumed-claim registry."
+    },
+    {
+      "id": "merchant-box-luck",
+      "name": "Merchant Mystery Box luck boost",
+      "status": "planned",
+      "rule": "Use independently verifiable randomness with 2x configured odds for KJ Genesis or KJ Global and a guaranteed minimum of KJ Pioneer.",
+      "requirements": [
+        "Publish the complete base and boosted probability tables before claims open.",
+        "Define how doubled top-tier weights are normalized.",
+        "Make every draw independently auditable."
+      ]
+    },
+    {
+      "id": "hardware-priority",
+      "name": "First-wave IOTA hardware priority",
+      "status": "planned",
+      "rule": "Give eligible holders priority access to pilot beacon or sensor development kits.",
+      "exclusions": [
+        "Availability, destination, duties, identity checks, and shipping terms must be published before fulfillment.",
+        "Priority does not mean guaranteed delivery in every jurisdiction."
+      ]
+    },
+    {
+      "id": "founder-pool",
+      "name": "5% founder pool eligibility",
+      "status": "legal-and-accounting-review",
+      "rule": "Proposed collective pool equal to 5% of defined net Merchant Mystery Box mint receipts and defined net node-upgrade fees.",
+      "requirements": [
+        "Define gross versus net receipts, currencies, refunds, taxes, chargebacks, payment fees, and accounting periods.",
+        "Define snapshot timing, transferred-token treatment, sanctions and KYC requirements, minimum payout, dust, unclaimed funds, and program duration.",
+        "Publish auditable statements and a payout claim process.",
+        "Obtain required legal and regulatory approvals before activation."
+      ],
+      "important": "The ERC-721 token alone does not create or automatically distribute this right."
+    }
+  ],
+  "milestones": [
+    {
+      "phase": 1,
+      "name": "Seed Pool",
+      "walletMessage": "Funder Status Verified — Seed Pool Active."
+    },
+    {
+      "phase": 2,
+      "name": "Merchant Launch",
+      "walletMessage": "Merchant Box Advantages Unlocked."
+    },
+    {
+      "phase": 3,
+      "name": "IOTA Hardware",
+      "walletMessage": "Physical IoT Relay Priority Unlocked."
+    },
+    {
+      "phase": 4,
+      "name": "Sovereign Protocol",
+      "walletMessage": "Sovereign Protocol Utility Decrypted."
+    }
+  ]
+}

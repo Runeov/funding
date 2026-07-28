@@ -1,0 +1,18 @@
+{
+  "chain": null,
+  "chainId": null,
+  "nativeCurrencySymbol": null,
+  "blockExplorerUrl": null,
+  "evmVersion": "cancun",
+  "mintPriceNative": null,
+  "maxPerWallet": 1,
+  "secondaryRoyaltyBps": 0,
+  "ownerMultisig": null,
+  "treasuryMultisig": null,
+  "unrevealedMetadataUri": "ipfs://REPLACE_WITH_UNREVEALED_CID/metadata.json",
+  "tokenMetadataBaseUri": "ipfs://REPLACE_WITH_METADATA_CID/",
+  "collectionMetadataUri": "ipfs://REPLACE_WITH_COLLECTION_CID/collection.json",
+  "legalReviewApproved": false,
+  "contractAuditApproved": false,
+  "testnetRehearsalTransaction": null
+}

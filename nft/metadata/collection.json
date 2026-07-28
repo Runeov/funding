@@ -1,0 +1,13 @@
+{
+  "name": "KJ Genesis Funder Key",
+  "description": "One of 150 genesis access keys supporting the Project KJ proof-of-concept pilot. Ownership is the verifiable eligibility signal for founder-level ecosystem benefits, subject to published program terms and activation milestones.",
+  "image": "ipfs://REPLACE_WITH_IMAGE_CID/kj-genesis-funder-key-master.png",
+  "external_link": "https://project-kj.example/funders",
+  "seller_fee_basis_points": 0,
+  "fee_recipient": "0x0000000000000000000000000000000000000000",
+  "properties": {
+    "edition_size": 150,
+    "artwork_sha256": "5a1fc50ecc9ea926297e38824f1b86ae21b97910711d5a2664ab5fb7264cd331",
+    "utility_policy": "ipfs://REPLACE_WITH_POLICY_CID/funder-utility-policy.json"
+  }
+}
