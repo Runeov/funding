@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const page = await readFile(join(projectRoot, '..', 'src_index.html'), 'utf8');
+const page = await readFile(join(projectRoot, '..', 'index.html'), 'utf8');
 const configSource = await readFile(join(projectRoot, 'mint-config.js'), 'utf8');
 
 const requiredPageMarkers = [
@@ -53,7 +53,7 @@ const inlineScripts = [
   ...page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi),
 ];
 if (inlineScripts.length === 0) {
-  throw new Error('No inline scripts found in src_index.html.');
+  throw new Error('No inline scripts found in index.html.');
 }
 for (const [, source] of inlineScripts) {
   Function(source);

@@ -1,0 +1,9 @@
+server/
+nft/
+src/
+*.tsbuildinfo
+.next/
+dist/
+build/
+model-before-*.png
+.codex-*

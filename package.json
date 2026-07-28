@@ -1,0 +1,10 @@
+{
+  "name": "project-kj",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix server run build",
+    "dev": "npm --prefix server run dev",
+    "start": "npm --prefix server run start"
+  }
+}

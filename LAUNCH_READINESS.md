@@ -2,7 +2,7 @@
 
 This repository contains three separate launch surfaces:
 
-- `src_index.html` and the two Ground demos: the public Project KJ site.
+- `index.html` and the two Ground demos: the public Project KJ site.
 - `nft/`: the 150-supply KJ Genesis Funder Key contract, metadata, release gates, and browser-wallet checkout configuration.
 - `server/`: an independent watch-only Bitcoin/Dogecoin wallet and payment-monitoring service.
 

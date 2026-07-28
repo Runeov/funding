@@ -1,0 +1,13 @@
+{
+  "cleanUrls": true,
+  "routes": [
+    { "src": "^/api/(.*)", "dest": "/api/$1" },
+    { "src": "^/ground-intelligence.html", "dest": "/ground-intelligence.html" },
+    { "src": "^/ground-restaurant-demo.html", "dest": "/ground-restaurant-demo.html" },
+    { "src": "^/public/(.*)", "dest": "/public/$1" },
+    { "src": "^/src_index.html", "dest": "/index.html" },
+    { "src": "^/$", "dest": "/index.html" },
+    { "src": "^/(.*\\.html)$", "dest": "/$1" },
+    { "src": "^/(.*)", "dest": "/$1" }
+  ]
+}

@@ -52,7 +52,7 @@ an account XPUB alone.
 - transactional outbox events for NFT reservation consumers
 - deterministic Bitcoin and Dogecoin derivation tests
 
-The standalone `../src_index.html` marketing artifact is intentionally
+The standalone `../index.html` marketing artifact is intentionally
 unchanged and continues to make zero external calls.
 
 ## Setup
