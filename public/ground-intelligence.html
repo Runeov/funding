@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Krobjob Ground Intelligence gives business owners a privacy-preserving overview of workplace activity, room use, safety, and optional contactless heartbeat-sensing pilots.">
+  <title>Krobjob Ground Intelligence</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f1f7f6;
+      --paper: #050909;
+      --surface: #0b1111;
+      --line: #223131;
+      --muted: #899a99;
+      --signal: #42e8dc;
+      --signal-dark: #70fff3;
+      --signal-pale: #0b2928;
+      --radius: 14px;
+      --shadow: 0 28px 100px rgba(0, 0, 0, .46);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.45;
+    }
+    button, a { font: inherit; }
+    a { color: inherit; }
+    .shell { width: min(1380px, calc(100% - 40px)); margin: 0 auto; }
+    .nav {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { font-size: 18px; font-weight: 800; letter-spacing: -.04em; text-decoration: none; }
+    .brand span { color: var(--signal-dark); }
+    .nav-meta { display: flex; align-items: center; gap: 24px; color: var(--muted); font-size: 13px; }
+    .nav-meta a { text-decoration: none; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 20px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      background: var(--signal);
+      color: #04100f;
+      font-weight: 750;
+      text-decoration: none;
+      transition: transform .18s ease, background .18s ease;
+    }
+    .button:hover { background: var(--signal-dark); color: #04100f; }
+    .button:active { transform: translateY(1px); }
+    .button.secondary { color: var(--ink); background: transparent; border-color: #506160; }
+    .button.secondary:hover { background: var(--surface); }
+    .hero {
+      min-height: calc(100dvh - 72px);
+      display: grid;
+      grid-template-columns: minmax(0, .92fr) minmax(520px, 1.08fr);
+      gap: clamp(42px, 7vw, 110px);
+      align-items: center;
+      padding: 74px 0 90px;
+    }
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 26px;
+      color: var(--signal-dark);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 7px var(--signal-pale); }
+    h1 {
+      max-width: 720px;
+      margin: 0;
+      font-size: clamp(58px, 7vw, 112px);
+      font-weight: 800;
+      letter-spacing: -.075em;
+      line-height: .87;
+    }
+    h1 em { color: var(--signal-dark); font-style: normal; }
+    .lead { max-width: 590px; margin: 30px 0 0; color: #a8b6b5; font-size: clamp(18px, 2vw, 23px); letter-spacing: -.025em; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+    .signal-link { display: inline-flex; align-items: center; min-height: 46px; color: var(--signal-dark); font-size: 13px; font-weight: 750; text-decoration: none; }
+    .signal-link:hover { color: var(--ink); }
+    .trustline { max-width: 560px; margin-top: 26px; color: var(--muted); font-size: 12px; }
+    .live {
+      position: relative;
+      overflow: hidden;
+      min-height: 620px;
+      padding: 24px;
+      border: 1px solid #285251;
+      border-radius: var(--radius);
+      background: #07100f;
+      color: #edf5ef;
+      box-shadow: var(--shadow);
+    }
+    .live::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: radial-gradient(circle at 50% 50%, rgba(66,232,220,.20), transparent 38%);
+      animation: breathe 6s ease-in-out infinite;
+    }
+    .live-head, .live-foot { position: relative; display: flex; justify-content: space-between; gap: 20px; z-index: 1; }
+    .live-head { color: #9eaaa2; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+    .room {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      grid-template-rows: 1fr .8fr;
+      gap: 8px;
+      height: 460px;
+      margin: 24px 0;
+    }
+    .zone {
+      position: relative;
+      overflow: hidden;
+      min-height: 170px;
+      padding: 20px;
+      border: 1px solid #354039;
+      border-radius: 10px;
+      background: rgba(255,255,255,.025);
+    }
+    .zone.active { border-color: #2c8b83; background: rgba(66,232,220,.08); }
+    .zone h3 { margin: 0; font-size: 15px; letter-spacing: -.02em; }
+    .zone small { color: #8e9a92; }
+    .zone-value { position: absolute; left: 20px; bottom: 18px; font-size: 45px; font-weight: 760; letter-spacing: -.06em; }
+    .zone-value span { color: #8e9a92; font-size: 12px; font-weight: 500; letter-spacing: 0; }
+    .field {
+      position: absolute;
+      right: -34px;
+      bottom: -44px;
+      width: 160px;
+      height: 160px;
+      border: 1px solid rgba(66,232,220,.45);
+      border-radius: 50%;
+      box-shadow: 0 0 0 28px rgba(66,232,220,.06), 0 0 0 56px rgba(66,232,220,.03);
+    }
+    .live-foot { align-items: flex-end; font-size: 11px; color: #9eaaa2; }
+    .live-foot strong { display: block; color: white; font-size: 16px; }
+    .section { padding: 130px 0; border-top: 1px solid var(--line); }
+    .statement {
+      display: grid;
+      grid-template-columns: .55fr 1.45fr;
+      gap: 60px;
+      align-items: start;
+    }
+    .section-kicker { color: var(--muted); font-size: 12px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+    h2 { max-width: 980px; margin: 0; font-size: clamp(44px, 6vw, 84px); line-height: .96; letter-spacing: -.06em; }
+    .principles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 90px; }
+    .principle { min-height: 250px; padding: 28px; border-left: 1px solid var(--line); }
+    .principle:first-child { border-left: 0; padding-left: 0; }
+    .principle b { display: block; margin-bottom: 76px; color: var(--signal-dark); font-size: 38px; letter-spacing: -.06em; }
+    .principle h3 { margin: 0 0 12px; font-size: 18px; }
+    .principle p { margin: 0; color: var(--muted); font-size: 14px; }
+    .operations { background: #edf7f5; color: #07100f; }
+    .operations .shell { display: grid; grid-template-columns: .8fr 1.2fr; gap: 100px; }
+    .operations h2 { position: sticky; top: 44px; align-self: start; }
+    .use-list { display: grid; gap: 0; }
+    .use {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 24px;
+      padding: 34px 0;
+      border-bottom: 1px solid #becdca;
+    }
+    .use:first-child { border-top: 1px solid #becdca; }
+    .use-index { color: #08776e; font-size: 12px; }
+    .use h3 { margin: 0 0 9px; font-size: 25px; letter-spacing: -.035em; }
+    .use p { max-width: 560px; margin: 0; color: #52625f; }
+    .tier {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 100px;
+      align-items: end;
+    }
+    .tier-copy p { max-width: 650px; color: var(--muted); font-size: 18px; }
+    .offer {
+      padding: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .offer-top { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
+    .offer-name { font-size: 25px; font-weight: 800; letter-spacing: -.04em; }
+    .offer-status { color: var(--signal-dark); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .offer ul { padding: 0; margin: 36px 0; list-style: none; }
+    .offer li { padding: 13px 0; border-bottom: 1px solid var(--line); }
+    .offer li::before { content: "Included"; display: inline-block; width: 88px; color: var(--signal-dark); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .offer li.optional::before { content: "Optional"; color: #f0b762; }
+    .price-note { margin-top: 18px; color: var(--muted); font-size: 11px; }
+    .boundary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 70px;
+    }
+    .boundary section { min-height: 350px; padding: 34px; border-radius: var(--radius); }
+    .boundary .yes { background: var(--signal-pale); }
+    .boundary .no { border: 1px solid var(--line); background: var(--surface); }
+    .boundary h3 { margin: 0 0 46px; font-size: 28px; letter-spacing: -.04em; }
+    .boundary ul { margin: 0; padding-left: 18px; }
+    .boundary li { margin: 12px 0; color: #a7b5b3; }
+    .signal-band {
+      position: relative;
+      overflow: hidden;
+      padding: 110px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(90deg, transparent 49.9%, rgba(66,232,220,.15) 50%, transparent 50.1%),
+        repeating-linear-gradient(90deg, transparent 0 79px, rgba(255,255,255,.035) 80px),
+        #07100f;
+    }
+    .signal-band::before {
+      content: "";
+      position: absolute;
+      width: 860px;
+      height: 860px;
+      left: 55%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(66,232,220,.14);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 80px rgba(66,232,220,.025),
+        0 0 0 160px rgba(66,232,220,.018),
+        0 0 0 240px rgba(66,232,220,.012);
+    }
+    .signal-grid { position: relative; z-index: 1; display: grid; grid-template-columns: .9fr 1.1fr; gap: 100px; align-items: center; }
+    .signal-grid p { max-width: 580px; color: var(--muted); font-size: 18px; }
+    .pipeline { display: grid; gap: 8px; }
+    .pipeline div {
+      display: grid;
+      grid-template-columns: 100px 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 18px;
+      border: 1px solid #29413f;
+      border-radius: 10px;
+      background: rgba(5,9,9,.78);
+    }
+    .pipeline span { color: var(--signal); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+    .pipeline strong { font-size: 14px; }
+    .pipeline small { color: var(--muted); }
+    .heartbeat {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 42%, rgba(66,232,220,.09), transparent 30%),
+        #050a0a;
+    }
+    .heartbeat::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .24;
+      background-image: linear-gradient(rgba(66,232,220,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(66,232,220,.09) 1px, transparent 1px);
+      background-size: 72px 72px;
+      -webkit-mask-image: radial-gradient(circle at 35% 50%, #000, transparent 72%);
+      mask-image: radial-gradient(circle at 35% 50%, #000, transparent 72%);
+    }
+    .heartbeat .shell { position: relative; z-index: 1; }
+    .heartbeat-head { display: grid; grid-template-columns: 1.1fr .9fr; gap: 90px; align-items: end; }
+    .heartbeat-head p { max-width: 610px; margin: 0; color: #a8b6b5; font-size: 19px; line-height: 1.6; }
+    .heartbeat-stage { display: grid; grid-template-columns: 1.15fr .85fr; gap: 10px; margin-top: 70px; }
+    .hb-visual {
+      position: relative;
+      overflow: hidden;
+      min-height: 440px;
+      padding: 28px;
+      border: 1px solid #285251;
+      border-radius: var(--radius);
+      background: #06100f;
+      box-shadow: var(--shadow);
+    }
+    .hb-visual::before {
+      content: "";
+      position: absolute;
+      width: 330px;
+      height: 330px;
+      left: 48%;
+      top: 52%;
+      border: 1px solid rgba(66,232,220,.22);
+      border-radius: 50%;
+      box-shadow: 0 0 0 54px rgba(66,232,220,.035), 0 0 0 108px rgba(66,232,220,.018);
+      transform: translate(-50%,-50%);
+      animation: heartbeatField 2.4s ease-in-out infinite;
+    }
+    .hb-label { position: relative; z-index: 2; color: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+    .hb-wave { position: absolute; z-index: 2; left: 5%; top: 38%; width: 90%; height: 34%; overflow: visible; }
+    .hb-wave .base { fill: none; stroke: rgba(66,232,220,.16); stroke-width: 2; }
+    .hb-wave .trace { fill: none; stroke: var(--signal); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 7px rgba(66,232,220,.7)); stroke-dasharray: 920; stroke-dashoffset: 920; animation: heartbeatTrace 3.6s linear infinite; }
+    .hb-readout { position: absolute; z-index: 2; left: 28px; right: 28px; bottom: 26px; display: flex; align-items: end; justify-content: space-between; gap: 20px; padding-top: 16px; border-top: 1px solid #29413f; }
+    .hb-readout strong { color: var(--signal-dark); font-size: clamp(24px,3vw,38px); letter-spacing: -.05em; }
+    .hb-readout span { max-width: 270px; color: var(--muted); font-size: 11px; text-align: right; }
+    .hb-offer { display: flex; flex-direction: column; padding: 34px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    .hb-status { align-self: flex-start; color: var(--signal-dark); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .hb-offer h3 { margin: 50px 0 14px; font-size: 30px; letter-spacing: -.045em; }
+    .hb-offer p { margin: 0; color: var(--muted); font-size: 14px; }
+    .hb-offer ul { margin: 28px 0 34px; padding: 0; list-style: none; }
+    .hb-offer li { padding: 11px 0; border-bottom: 1px solid var(--line); color: #b8c5c3; font-size: 13px; }
+    .hb-offer li::before { content: "—"; margin-right: 10px; color: var(--signal); }
+    .hb-offer .button { align-self: flex-start; margin-top: auto; }
+    .heartbeat-loop { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+    .heartbeat-loop li { min-height: 120px; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: rgba(11,17,17,.72); }
+    .heartbeat-loop b { display: block; color: var(--signal-dark); font-size: 15px; }
+    .heartbeat-loop span { display: block; margin-top: 28px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .hb-boundary { display: grid; grid-template-columns: 180px 1fr auto; gap: 26px; align-items: center; margin-top: 34px; padding-top: 28px; border-top: 1px solid var(--line); }
+    .hb-boundary b { color: #f0b762; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+    .hb-boundary p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .hb-boundary a { color: var(--signal-dark); font-size: 11px; text-decoration: none; white-space: nowrap; }
+    .hb-boundary a:hover { color: var(--ink); }
+    @keyframes heartbeatField { 0%,100% { opacity:.5; transform:translate(-50%,-50%) scale(.96); } 45% { opacity:1; transform:translate(-50%,-50%) scale(1.03); } 55% { transform:translate(-50%,-50%) scale(.99); } }
+    @keyframes heartbeatTrace { 0% { stroke-dashoffset:920; opacity:.25; } 18%,82% { opacity:1; } 100% { stroke-dashoffset:0; opacity:.25; } }
+    .cta {
+      display: grid;
+      grid-template-columns: 1.5fr .5fr;
+      align-items: end;
+      gap: 40px;
+      padding-bottom: 100px;
+    }
+    .cta .button { justify-self: end; }
+    footer { padding: 28px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    @keyframes breathe { 0%, 100% { transform: scale(.86); opacity: .6; } 50% { transform: scale(1.1); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+    @media (max-width: 980px) {
+      .hero, .statement, .operations .shell, .tier, .cta, .signal-grid, .heartbeat-head, .heartbeat-stage { grid-template-columns: 1fr; }
+      .hero { padding-top: 52px; }
+      .live { min-height: 580px; }
+      .principles { grid-template-columns: 1fr 1fr; }
+      .principle:nth-child(3) { border-left: 0; }
+      .operations h2 { position: static; margin-bottom: 45px; }
+      .cta .button { justify-self: start; }
+      .heartbeat-loop { grid-template-columns: 1fr 1fr; }
+      .hb-boundary { grid-template-columns: 1fr; gap: 12px; }
+    }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 24px, 1380px); }
+      .nav-meta > a:not(.button) { display: none; }
+      h1 { font-size: clamp(54px, 18vw, 82px); }
+      .room { grid-template-columns: 1fr 1fr; height: 430px; }
+      .zone { padding: 14px; }
+      .zone-value { left: 14px; font-size: 34px; }
+      .live { padding: 14px; }
+      .principles, .boundary { grid-template-columns: 1fr; }
+      .pipeline div { grid-template-columns: 72px 1fr; }
+      .pipeline small { grid-column: 2; }
+      .heartbeat-loop { grid-template-columns: 1fr; }
+      .hb-visual { min-height: 350px; padding: 20px; }
+      .hb-visual::before { width: 230px; height: 230px; }
+      .hb-readout { left: 20px; right: 20px; bottom: 20px; align-items: flex-start; flex-direction: column; gap: 4px; }
+      .hb-readout span { text-align: left; }
+      .hb-offer { padding: 26px 20px; }
+      .hb-offer h3 { margin-top: 36px; }
+      .principle, .principle:first-child, .principle:nth-child(3) { min-height: 0; padding: 28px 0; border-left: 0; border-top: 1px solid var(--line); }
+      .principle b { margin-bottom: 36px; }
+      .section { padding: 90px 0; }
+      .offer li::before { display: block; width: auto; margin-bottom: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="shell">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="index.html#top" aria-label="Project KJ home">krobjob<span>.</span></a>
+      <div class="nav-meta">
+        <a href="#principles">Privacy boundary</a>
+        <a href="#heartbeat">Heartbeat sensing</a>
+        <a href="#tier">Higher tier</a>
+        <a href="index.html#systems">Project KJ</a>
+        <a class="button" href="mailto:hei@krobjob.com?subject=Ground%20Intelligence%20pilot">Join the pilot</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="shell hero">
+      <div>
+        <div class="eyebrow"><span class="pulse" aria-hidden="true"></span>Ground Intelligence</div>
+        <h1>See how work <em>flows.</em></h1>
+        <p class="lead">A live operational picture of your workplace—room activity, utilization, safety signals, and a path to contactless heartbeat sensing—without cameras or individual employee tracking.</p>
+        <div class="actions">
+          <a class="button" href="ground-restaurant-demo.html">Launch restaurant demo</a>
+          <a class="button secondary" href="mailto:hei@krobjob.com?subject=Ground%20Intelligence%20pilot">Request a controlled pilot</a>
+          <a class="signal-link" href="#heartbeat">Explore heartbeat sensing →</a>
+        </div>
+        <p class="trustline">Pilot capability. Pricing and performance claims remain subject to field validation and Thai PDPA review.</p>
+      </div>
+
+      <div class="live" aria-label="Illustrative workplace activity overview">
+        <div class="live-head"><span>Udon flagship · illustrative</span><span>Semantic-only feed</span></div>
+        <div class="room">
+          <article class="zone active"><h3>Front of house</h3><small>Active now</small><div class="zone-value">2–5 <span>people band</span></div><span class="field"></span></article>
+          <article class="zone"><h3>Kitchen</h3><small>Steady activity</small><div class="zone-value">01 <span>active zone</span></div></article>
+          <article class="zone"><h3>Office</h3><small>Available</small><div class="zone-value">0 <span>presence</span></div></article>
+          <article class="zone active"><h3>Dispatch</h3><small>Movement detected</small><div class="zone-value">Live <span>workflow</span></div><span class="field"></span></article>
+        </div>
+        <div class="live-foot"><span><strong>Healthy</strong>4 sensing zones</span><span>Raw Wi‑Fi signal stays on site</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="principles">
+      <div class="shell">
+        <div class="statement">
+          <div class="section-kicker">A better management signal</div>
+          <h2>Manage the workplace. Never score the person.</h2>
+        </div>
+        <div class="principles">
+          <article class="principle"><b>01</b><h3>No cameras</h3><p>Wi‑Fi signal changes describe room activity without capturing images or audio.</p></article>
+          <article class="principle"><b>02</b><h3>No identities</h3><p>The system reports zones and coarse count bands, not who an employee is.</p></article>
+          <article class="principle"><b>03</b><h3>Local processing</h3><p>Raw CSI and sensitive signals remain at the business site.</p></article>
+          <article class="principle"><b>04</b><h3>Visible governance</h3><p>Staff notice, purpose limits, access logs and deletion controls are part of deployment.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="signal-band">
+      <div class="shell signal-grid">
+        <div>
+          <div class="section-kicker">Intelligence where work happens</div>
+          <h2>Wi‑Fi becomes a spatial signal.</h2>
+          <p>Low-cost ESP32-S3 nodes read changes in the existing radio field. A local edge computer turns those changes into narrow operational events before anything reaches Krobjob.</p>
+        </div>
+        <div class="pipeline" aria-label="Ground Intelligence processing pipeline">
+          <div><span>Sense</span><strong>ESP32-S3 room mesh</strong><small>3–6 nodes per zone</small></div>
+          <div><span>Reduce</span><strong>On-site RUView processor</strong><small>Raw CSI stays local</small></div>
+          <div><span>Protect</span><strong>Semantic privacy filter</strong><small>No identity; sensitive signals stay local</small></div>
+          <div><span>Act</span><strong>Krobjob owner overview</strong><small>Patterns, safety, utilization</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section heartbeat" id="heartbeat">
+      <div class="shell">
+        <div class="heartbeat-head">
+          <div><div class="section-kicker">Optional sensing module · controlled pilot</div><h2>A room can sense the rhythm of a heartbeat.</h2></div>
+          <p>When one person is resting in a calibrated zone, tiny chest movements can change the surrounding Wi‑Fi field. Ground Intelligence can look for that repeating rhythm without a camera or body-worn sensor.</p>
+        </div>
+
+        <div class="heartbeat-stage">
+          <div class="hb-visual" aria-label="Illustrative contactless heartbeat signal">
+            <div class="hb-label">Contactless heartbeat signal · illustrative</div>
+            <svg class="hb-wave" viewBox="0 0 900 180" role="img" aria-label="Illustrative repeating heartbeat waveform">
+              <path class="base" d="M0 96H900"></path>
+              <path class="trace" d="M0 96H80L105 92L128 96H185L207 80L226 96H274L296 90L318 96H360L378 106L394 48L411 140L430 12L450 112L470 86L496 96H558L580 90L602 96H646L664 106L680 48L697 140L716 12L736 112L756 86L782 96H900"></path>
+            </svg>
+            <div class="hb-readout"><strong>Signal possibility</strong><span>Single resting person · fixed position · locally calibrated</span></div>
+          </div>
+
+          <aside class="hb-offer" aria-label="Krobjob heartbeat sensing pilot offer">
+            <span class="hb-status">Controlled pilot · available now</span>
+            <h3>What KrobJob can offer today</h3>
+            <p>KrobJob can provide the room assessment, sensing-node setup, local processing, calibration workflow and owner-facing interface. The pilot proves performance in the real room before any operational use.</p>
+            <ul>
+              <li>Defined resting or seated sensing zone</li>
+              <li>Reference-device comparison during calibration</li>
+              <li>Local signal processing and visible consent controls</li>
+              <li>Estimated pulse rhythm shown only when signal quality is sufficient</li>
+            </ul>
+            <a class="button" href="mailto:hei@krobjob.com?subject=Contactless%20heartbeat%20sensing%20pilot">Discuss a heartbeat pilot</a>
+          </aside>
+        </div>
+
+        <ol class="heartbeat-loop" aria-label="Heartbeat sensing flow">
+          <li><b>Sense</b><span>Read small, repeating changes in the room’s radio field.</span></li>
+          <li><b>Separate</b><span>Distinguish a quiet body rhythm from ordinary room movement.</span></li>
+          <li><b>Check</b><span>Compare the estimate with a reference monitor during setup.</span></li>
+          <li><b>Protect</b><span>Keep sensitive source signals on site and show only the approved result.</span></li>
+        </ol>
+
+        <div class="hb-boundary">
+          <b>Important boundary</b>
+          <p>This is an experimental wellness and safety signal—not an ECG, diagnosis, emergency alarm or medical device. Movement, multiple people, room layout and node placement can reduce reliability. Every deployment requires explicit consent, local validation and legal review.</p>
+          <a href="https://arxiv.org/abs/2305.14490" target="_blank" rel="noopener noreferrer">Read the research basis ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section operations" id="how">
+      <div class="shell">
+        <h2>From guesswork to operating rhythm.</h2>
+        <div class="use-list">
+          <article class="use"><span class="use-index">A</span><div><h3>See where service slows</h3><p>Compare active zones with orders and queue pressure to find operational bottlenecks—without watching staff through a camera.</p></div></article>
+          <article class="use"><span class="use-index">B</span><div><h3>Plan staffing by pattern</h3><p>Use aggregated activity windows to understand when a location is genuinely busy, quiet or underused.</p></div></article>
+          <article class="use"><span class="use-index">C</span><div><h3>Use space intelligently</h3><p>Understand which rooms and work areas carry demand before expanding, rearranging or adding equipment.</p></div></article>
+          <article class="use"><span class="use-index">D</span><div><h3>Support safer operations</h3><p>Surface prolonged inactivity or a possible fall event for human verification. Never treat an RF heuristic as a medical conclusion.</p></div></article>
+          <article class="use"><span class="use-index">E</span><div><h3>Connect activity to Krobjob</h3><p>Overlay coarse workplace activity with sales periods, kitchen flow and dispatch—not employee identity or individual performance.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="tier">
+      <div class="shell">
+        <div class="tier">
+          <div class="tier-copy">
+            <div class="section-kicker">Higher-tier Krobjob capability</div>
+            <h2>Operations intelligence, built into the business system.</h2>
+            <p>Ground Intelligence is being designed as a premium Krobjob add-on for multi-zone and multi-location owners. The initial commercial package will be set only after the controlled pilot establishes installation cost and measured accuracy.</p>
+          </div>
+          <aside class="offer" aria-label="Ground Intelligence pilot package">
+            <div class="offer-top">
+              <div><div class="offer-name">Ground Intelligence</div><small>Premium operations add-on</small></div>
+              <div class="offer-status">Pilot access</div>
+            </div>
+            <ul>
+              <li>Live zone overview</li>
+              <li>Activity and utilization history</li>
+              <li>Operational anomaly alerts</li>
+              <li>Multi-location owner view</li>
+              <li>Privacy controls and retention policy</li>
+              <li class="optional">Heartbeat-sensing pilot module</li>
+            </ul>
+            <a class="button" href="mailto:hei@krobjob.com?subject=Krobjob%20Ground%20premium%20pilot">Discuss pilot access</a>
+            <p class="price-note">Commercial pricing: TBD after hardware, installation and accuracy validation. No pre-order is being taken on this page.</p>
+          </aside>
+        </div>
+
+        <div class="boundary">
+          <section class="yes">
+            <h3>What owners can see</h3>
+            <ul>
+              <li>Whether a defined work zone is active</li>
+              <li>Coarse occupancy bands and time patterns</li>
+              <li>Space utilization and workflow anomalies</li>
+              <li>Sensor health and deployment status</li>
+            </ul>
+          </section>
+          <section class="no">
+            <h3>What Krobjob will not build</h3>
+            <ul>
+              <li>Named employee movement histories</li>
+              <li>Individual productivity or behavior scores</li>
+              <li>Hidden monitoring or disciplinary automation</li>
+              <li>Central biometric, pose or raw CSI storage</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="shell cta">
+        <div><div class="section-kicker">One room. Measured honestly.</div><h2>Start with a controlled workplace pilot.</h2></div>
+        <a class="button" href="mailto:hei@krobjob.com?subject=Ground%20Intelligence%20controlled%20pilot">Talk to Krobjob</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">Krobjob Ground Intelligence is an experimental capability. Deployment requires consent/notice design, purpose limitation, access control, retention limits and legal review.</div>
+  </footer>
+</body>
+</html>
