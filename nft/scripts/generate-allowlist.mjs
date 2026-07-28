@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const inputPath = process.argv[2]
   ? join(process.cwd(), process.argv[2])
-  : join(projectRoot, 'config', 'allowlist.example.json');
+  : join(projectRoot, 'config', 'allowlist.json');
 const outputPath = process.argv[3]
   ? join(process.cwd(), process.argv[3])
   : join(projectRoot, 'allowlist', 'generated.json');
@@ -84,7 +84,11 @@ const proofs = normalized.map((entry, leafIndex) => {
     }
     index = Math.floor(index / 2);
   }
-  return { ...entry, proof };
+  return {
+    address: entry.address,
+    allocation: entry.allocation,
+    proof,
+  };
 });
 
 await mkdir(dirname(outputPath), { recursive: true });

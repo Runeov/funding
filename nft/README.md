@@ -43,6 +43,11 @@ The NFT itself does not create company ownership.
 - revealable IPFS metadata that can be permanently frozen;
 - optional ERC-2981 secondary-sale royalty signalling;
 - ownership check (`isFunder`) for marketplace entitlement services;
+- a browser-wallet checkout that verifies contract code, chain, price, supply,
+  sale phase, pause state, wallet allowance, and allowlist proofs before
+  enabling a transaction;
+- a fail-closed public mint configuration that remains disabled until the
+  release-gated deployment script writes the verified contract details;
 - deterministic double-hashed, sorted-pair allowlist generation compatible
   with the OpenZeppelin Solidity verifier; and
 - contract tests covering the supply cap, sale controls, metadata freeze,
@@ -60,14 +65,30 @@ npm run metadata:generate
 npm run check
 ```
 
+The normal `check` command verifies an example allowlist in
+`allowlist/example.generated.json`. It never writes
+`allowlist/generated.json`, so a reviewed production founder list cannot be
+silently replaced by the example wallet during a routine test run.
+
 Generate a real allowlist after replacing the example wallet:
 
 ```powershell
 npm run allowlist:generate -- config/allowlist.json allowlist/generated.json
+npm run allowlist:check -- allowlist/generated.json
 ```
 
-The generated root is supplied to `setAllowlistRoot`. Keep the complete input,
-sorted tree, and proof file as launch records.
+For an allowlist launch, set `saleMode` to `allowlist` and copy the generated
+root into `allowlistRoot` in the reviewed release configuration. For a public
+launch, set `saleMode` to `public`; a production allowlist is not required.
+The release checker rejects the example wallet, mismatched roots, malformed
+proofs, and allocations above `maxPerWallet`.
+
+The generated root is supplied to `setAllowlistRoot` after deployment. Keep the
+complete input, sorted tree, and proof file as controlled launch records.
+Human-readable labels from the private input are intentionally omitted from the
+browser proof file. Wallet addresses in that static file are still public; use
+an authenticated per-wallet proof service instead if the final buyer list must
+remain private.
 
 ## Metadata model
 
@@ -91,6 +112,9 @@ Before IPFS upload:
 6. Put the resulting directory URI into `config/release.json`.
 
 `npm run release:check` intentionally fails until every launch gate is complete.
+It also requires a positive chain ID, an 18-decimal-compatible mint price, final
+IPFS paths, the selected sale mode, a correctly shaped testnet transaction
+hash, and—when applicable—the verified production allowlist root.
 
 ## Required business decisions
 
@@ -98,15 +122,17 @@ No mainnet deployment should occur until these are recorded:
 
 1. **Chain:** Base, Polygon, Ethereum, or another audited EVM network, with
    Cancun opcode support explicitly confirmed.
-2. **Mint price and currency:** fixed native-token price or a separate
+2. **Network display:** native currency ticker and official HTTPS block
+   explorer used by the public wallet.
+3. **Mint price and currency:** fixed native-token price or a separate
    stablecoin mint design.
-3. **Sale policy:** allowlist only, public phase, per-wallet cap, and any
+4. **Sale policy:** allowlist only, public phase, per-wallet cap, and any
    reserved allocations.
-4. **Administration:** 2-of-3 multisig addresses for owner and treasury.
-5. **Proceeds:** a written pilot budget and public use-of-funds statement.
-6. **Benefits:** snapshot timing, transfer treatment, claim consumption,
+5. **Administration:** 2-of-3 multisig addresses for owner and treasury.
+6. **Proceeds:** a written pilot budget and public use-of-funds statement.
+7. **Benefits:** snapshot timing, transfer treatment, claim consumption,
    exclusions, taxes, geographic availability, and failure/refund treatment.
-7. **Revenue pool:** gross versus net basis, payment assets, payout cadence,
+8. **Revenue pool:** gross versus net basis, payment assets, payout cadence,
    custody, unclaimed funds, sanctions/KYC, and termination rules.
 
 The draft policy uses these mechanics:
@@ -134,6 +160,21 @@ After legal approval and an independent contract audit:
 5. export the RPC and single-purpose deployer variables from `.env.example`;
    all constructor settings come from the reviewed release file; and
 6. run `npm run deploy:target`.
+
+The deployment script repeats the release validation internally, so invoking
+the underlying Node script directly cannot bypass the launch gates. It also
+checks that the owner and treasury addresses contain multisig contract code on
+the selected chain before broadcasting. The supported `deploy:target` command
+also reruns the complete metadata, allowlist-tooling, wallet-selector, build,
+format, and contract-test suite before any broadcast.
+
+The deployment script writes `mint-config.js` only after all release checks
+pass and deployment is confirmed. The website then reads live contract state
+through the buyer's explicitly connected EVM wallet. The contract still starts
+with its sale closed; the multisig owner must publish the reviewed allowlist
+root, if used, and deliberately open the selected sale phase. Verify the
+contract source on the selected explorer and compare its constructor arguments
+with the saved deployment record before opening that phase.
 
 Never commit a deployer private key. The production owner and treasury should be
 multisigs, not the deployer wallet.

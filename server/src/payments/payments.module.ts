@@ -10,6 +10,6 @@ import { PaymentsService } from './payments.service';
   imports: [WalletModule],
   controllers: [PaymentsController, OutboxController],
   providers: [PaymentsService, PaymentsMonitor, OutboxService],
-  exports: [PaymentsService],
+  exports: [PaymentsService, PaymentsMonitor],
 })
 export class PaymentsModule {}

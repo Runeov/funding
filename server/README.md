@@ -45,6 +45,7 @@ an account XPUB alone.
 - one database-backed monitor lease per chain, safe across service replicas
 - coherent tip-before/tip-after batches with canonical-block verification
 - HTTPS and expected-genesis verification for every chain provider
+- provider readiness and last-success/failure timestamps on the health endpoint
 - UTXO/outpoint-level payment records
 - confirmations calculated from canonical block height
 - reorg-aware settlement reversal and reconfirmation epochs
@@ -81,6 +82,10 @@ Each tick leases one chain to one service replica, scans at most
 `PAYMENT_MONITOR_BATCH_SIZE` least-recently-scanned intents, and applies nothing
 unless the chain tip is unchanged across the full batch. Addresses remain under
 watch through the configured retention period after expiry or settlement.
+When monitoring is enabled, each leased provider is also checked against its
+expected genesis and current canonical tip even while there are no open orders.
+`GET /v1/health` reports `degraded` until every configured provider has passed a
+check, without making provider calls in the health request itself.
 
 ## Internal API
 
@@ -120,9 +125,13 @@ Content-Type: application/json
 ```
 
 Amounts are decimal strings in the chain's smallest unit. This avoids JSON
-floating-point loss. Retrying the same external order ID with identical data is
-safe even after expiry; changing immutable data returns HTTP 409. New-order
-expiry cannot be farther in the future than the configured retention period.
+floating-point loss. The service enforces a minimum of three confirmations even
+if a caller requests fewer. Retrying the same external order ID with identical
+data is safe even after expiry; changing immutable data returns HTTP 409.
+New-order expiry cannot be farther in the future than the configured retention
+period. If `expiresAt` is omitted, the service derives a finite expiry one
+retention period after creation and continues watching for one additional
+retention period.
 
 Read order/payment status:
 
@@ -148,7 +157,9 @@ marketplace to reserve the NFT. The wallet service does not claim the NFT is
 reserved before the marketplace performs that action. Consumers must remain
 idempotent by `eventKey` and `orderId`. `payment.reversed` releases an
 unfulfilled reservation after a reorg. If fulfillment has already occurred,
-the order remains in manual review.
+the order remains in manual review. `payment.expired` closes an unpaid order.
+`payment.review` is emitted instead when a monitoring window ends without a
+clean terminal state, preventing an order from remaining silently awaiting.
 
 ## Payment safety model
 

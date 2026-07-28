@@ -24,6 +24,11 @@ import { WalletService } from '../wallet/wallet.service';
 import type { AddressScan, ChainTip } from './chain-provider';
 import type { CreateOrderDto } from './dto/create-order.dto';
 import { createOrderRequestHash } from './order-hash';
+import {
+  deriveOrderExpiry,
+  enforceConfirmationFloor,
+  finalizeMonitoringWindow,
+} from './payment-policy';
 import { nextPaymentStatus } from './payment-state';
 
 const MAX_POSTGRES_BIGINT = 9_223_372_036_854_775_807n;
@@ -128,11 +133,14 @@ export class PaymentsService {
   async createOrder(dto: CreateOrderDto): Promise<OrderPaymentView> {
     const chain = dto.chain.toUpperCase() as Chain;
     const expectedAtomic = BigInt(dto.expectedAmountAtomic);
+    const requiredConfirmations = enforceConfirmationFloor(
+      dto.requiredConfirmations,
+    );
     if (expectedAtomic > MAX_POSTGRES_BIGINT) {
       throw new BadRequestException('Payment amount exceeds database limits');
     }
 
-    const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+    const requestedExpiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
     const retentionMs =
       this.config.paymentMonitor.retentionDays * 24 * 60 * 60 * 1_000;
     const requestHash = createOrderRequestHash({
@@ -141,8 +149,8 @@ export class PaymentsService {
       itemRef: dto.itemRef,
       chain,
       expectedAmountAtomic: expectedAtomic.toString(),
-      requiredConfirmations: dto.requiredConfirmations,
-      expiresAt: expiresAt?.toISOString() ?? null,
+      requiredConfirmations,
+      expiresAt: requestedExpiresAt?.toISOString() ?? null,
     });
 
     return runSerializable(this.prisma, async (transaction) => {
@@ -161,17 +169,26 @@ export class PaymentsService {
         }
         return mapOrder(existing);
       }
-      if (expiresAt && expiresAt.getTime() <= Date.now()) {
+      const now = new Date();
+      if (
+        requestedExpiresAt &&
+        requestedExpiresAt.getTime() <= now.getTime()
+      ) {
         throw new BadRequestException('expiresAt must be in the future');
       }
       if (
-        expiresAt &&
-        expiresAt.getTime() > Date.now() + retentionMs
+        requestedExpiresAt &&
+        requestedExpiresAt.getTime() > now.getTime() + retentionMs
       ) {
         throw new BadRequestException(
           `expiresAt cannot be more than ${this.config.paymentMonitor.retentionDays} days in the future`,
         );
       }
+      const expiresAt = deriveOrderExpiry(
+        requestedExpiresAt,
+        now,
+        this.config.paymentMonitor.retentionDays,
+      );
       if (!this.config.paymentMonitor.enabled) {
         throw new ServiceUnavailableException(
           'Payment monitoring is disabled; refusing to issue a deposit address',
@@ -213,8 +230,7 @@ export class PaymentsService {
         walletView.id,
         account,
       );
-      const monitorFrom = Math.max(expiresAt?.getTime() ?? 0, Date.now());
-      const monitorUntil = new Date(monitorFrom + retentionMs);
+      const monitorUntil = new Date(expiresAt.getTime() + retentionMs);
 
       const order = await transaction.order.create({
         data: {
@@ -226,7 +242,7 @@ export class PaymentsService {
             create: {
               depositAddressId: depositAddress.id,
               expectedAtomic,
-              requiredConfirmations: dto.requiredConfirmations,
+              requiredConfirmations,
               expiresAt,
               monitorUntil,
             },
@@ -251,6 +267,95 @@ export class PaymentsService {
       throw new NotFoundException('Order not found');
     }
     return mapOrder(order);
+  }
+
+  async finalizePastMonitoringWindows(
+    now = new Date(),
+  ): Promise<number> {
+    const candidates = await this.prisma.paymentIntent.findMany({
+      where: {
+        monitorUntil: { lte: now },
+        OR: [
+          {
+            status: {
+              in: [
+                PaymentStatus.AWAITING,
+                PaymentStatus.PARTIAL,
+                PaymentStatus.CONFIRMING,
+                PaymentStatus.REORGED,
+              ],
+            },
+          },
+          {
+            status: {
+              in: [PaymentStatus.EXPIRED, PaymentStatus.CANCELLED],
+            },
+            order: { status: { not: OrderStatus.CANCELLED } },
+          },
+        ],
+      },
+      select: { id: true },
+      orderBy: { monitorUntil: 'asc' },
+      take: this.config.paymentMonitor.batchSize,
+    });
+
+    let finalized = 0;
+    for (const { id } of candidates) {
+      const changed = await runSerializable(
+        this.prisma,
+        async (transaction) => {
+          await lockPaymentIntent(transaction, id);
+          const intent = await transaction.paymentIntent.findUnique({
+            where: { id },
+            include: { order: true },
+          });
+          if (!intent || intent.monitorUntil.getTime() > now.getTime()) {
+            return false;
+          }
+
+          const transition = finalizeMonitoringWindow({
+            paymentStatus: intent.status,
+            orderStatus: intent.order.status,
+            observedAtomic: intent.observedAtomic,
+            confirmedAtomic: intent.confirmedAtomic,
+            settlementEpoch: intent.settlementEpoch,
+          });
+          if (!transition) {
+            return false;
+          }
+
+          await transaction.order.update({
+            where: { id: intent.orderId },
+            data: { status: transition.orderStatus },
+          });
+          await transaction.paymentIntent.update({
+            where: { id: intent.id },
+            data: {
+              status: transition.paymentStatus,
+              stateVersion: { increment: 1 },
+            },
+          });
+          await transaction.outboxEvent.create({
+            data: {
+              eventKey: `payment.monitoring-ended:${intent.id}`,
+              topic: transition.eventTopic,
+              aggregateId: intent.orderId,
+              payload: {
+                orderId: intent.orderId,
+                paymentIntentId: intent.id,
+                paymentStatus: transition.paymentStatus.toLowerCase(),
+                observedAmountAtomic: intent.observedAtomic.toString(),
+                confirmedAmountAtomic: intent.confirmedAtomic.toString(),
+                monitorUntil: intent.monitorUntil.toISOString(),
+              },
+            },
+          });
+          return true;
+        },
+      );
+      finalized += changed ? 1 : 0;
+    }
+    return finalized;
   }
 
   async reconcilePaymentIntent(
@@ -549,6 +654,14 @@ export class PaymentsService {
         await transaction.order.update({
           where: { id: intent.orderId },
           data: { status: OrderStatus.REVIEW },
+        });
+      } else if (
+        nextStatus === PaymentStatus.EXPIRED ||
+        nextStatus === PaymentStatus.CANCELLED
+      ) {
+        await transaction.order.update({
+          where: { id: intent.orderId },
+          data: { status: OrderStatus.CANCELLED },
         });
       }
 

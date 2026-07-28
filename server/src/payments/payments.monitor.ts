@@ -24,11 +24,33 @@ interface ScannedIntent {
   scan: AddressScan;
 }
 
+type ProviderState = 'pending' | 'ready' | 'degraded';
+
+interface ProviderCheck {
+  state: ProviderState;
+  lastCheckedAt: Date | null;
+  lastSuccessAt: Date | null;
+  lastFailureAt: Date | null;
+}
+
+export interface PaymentProviderReadiness {
+  enabled: boolean;
+  ready: boolean;
+  chains: Array<{
+    chain: Lowercase<Chain>;
+    state: ProviderState | 'disabled';
+    lastCheckedAt: string | null;
+    lastSuccessAt: string | null;
+    lastFailureAt: string | null;
+  }>;
+}
+
 @Injectable()
 export class PaymentsMonitor
   implements OnApplicationBootstrap, OnModuleDestroy
 {
   private readonly logger = new Logger(PaymentsMonitor.name);
+  private readonly providerChecks = new Map<Chain, ProviderCheck>();
   private interval?: NodeJS.Timeout;
   private running = false;
 
@@ -36,12 +58,20 @@ export class PaymentsMonitor
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
     private readonly payments: PaymentsService,
-  ) {}
+  ) {
+    for (const { chain } of config.providers) {
+      this.providerChecks.set(chain, {
+        state: 'pending',
+        lastCheckedAt: null,
+        lastSuccessAt: null,
+        lastFailureAt: null,
+      });
+    }
+  }
 
   onApplicationBootstrap(): void {
     if (!this.config.paymentMonitor.enabled) {
       this.logger.log('Blockchain payment monitoring is disabled');
-      return;
     }
 
     this.interval = setInterval(
@@ -59,10 +89,25 @@ export class PaymentsMonitor
   }
 
   async scanAll(): Promise<void> {
+    const finalized =
+      await this.payments.finalizePastMonitoringWindows();
+    if (finalized > 0) {
+      this.logger.warn(
+        `Finalized ${finalized} payment monitoring window(s)`,
+      );
+    }
+    if (!this.config.paymentMonitor.enabled) {
+      return;
+    }
+
     for (const providerConfig of this.config.providers) {
       try {
-        await this.scanChain(providerConfig);
+        const checked = await this.scanChain(providerConfig);
+        if (checked) {
+          this.recordProviderSuccess(providerConfig.chain);
+        }
       } catch (error) {
+        this.recordProviderFailure(providerConfig.chain);
         const message =
           error instanceof Error ? error.message : 'Unknown provider error';
         this.logger.error(
@@ -72,41 +117,48 @@ export class PaymentsMonitor
     }
   }
 
-  private async scanChain(
-    providerConfig: ChainProviderConfig,
-  ): Promise<void> {
-    const intents = await this.prisma.paymentIntent.findMany({
-      where: {
-        monitorUntil: { gt: new Date() },
-        depositAddress: {
-          chain: providerConfig.chain,
-          network: providerConfig.network,
-        },
-      },
-      include: {
-        depositAddress: true,
-        utxos: {
-          include: {
-            transaction: {
-              select: {
-                txid: true,
-                status: true,
-                currentBlockHash: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: [
-        { lastScannedAt: { sort: 'asc', nulls: 'first' } },
-        { createdAt: 'asc' },
-      ],
-      take: this.config.paymentMonitor.batchSize,
-    });
-    if (intents.length === 0) {
-      return;
+  getProviderReadiness(): PaymentProviderReadiness {
+    if (!this.config.paymentMonitor.enabled) {
+      return {
+        enabled: false,
+        ready: true,
+        chains: this.config.accounts.map(({ chain }) => ({
+          chain: chain.toLowerCase() as Lowercase<Chain>,
+          state: 'disabled',
+          lastCheckedAt: null,
+          lastSuccessAt: null,
+          lastFailureAt: null,
+        })),
+      };
     }
 
+    const chains = this.config.providers.map(({ chain }) => {
+      const check = this.providerChecks.get(chain) ?? {
+        state: 'pending' as const,
+        lastCheckedAt: null,
+        lastSuccessAt: null,
+        lastFailureAt: null,
+      };
+      return {
+        chain: chain.toLowerCase() as Lowercase<Chain>,
+        state: check.state,
+        lastCheckedAt: check.lastCheckedAt?.toISOString() ?? null,
+        lastSuccessAt: check.lastSuccessAt?.toISOString() ?? null,
+        lastFailureAt: check.lastFailureAt?.toISOString() ?? null,
+      };
+    });
+    return {
+      enabled: true,
+      ready:
+        chains.length > 0 &&
+        chains.every(({ state }) => state === 'ready'),
+      chains,
+    };
+  }
+
+  private async scanChain(
+    providerConfig: ChainProviderConfig,
+  ): Promise<boolean> {
     const leaseOwner = randomUUID();
     if (
       !(await this.acquireLease(
@@ -115,7 +167,7 @@ export class PaymentsMonitor
         leaseOwner,
       ))
     ) {
-      return;
+      return false;
     }
 
     try {
@@ -123,6 +175,38 @@ export class PaymentsMonitor
       await provider.verifyNetwork(providerConfig.genesisHash);
       const tip = await provider.getTip();
       await this.assertTipProgression(providerConfig, provider, tip);
+      const intents = await this.prisma.paymentIntent.findMany({
+        where: {
+          monitorUntil: { gt: new Date() },
+          depositAddress: {
+            chain: providerConfig.chain,
+            network: providerConfig.network,
+          },
+        },
+        include: {
+          depositAddress: true,
+          utxos: {
+            include: {
+              transaction: {
+                select: {
+                  txid: true,
+                  status: true,
+                  currentBlockHash: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [
+          { lastScannedAt: { sort: 'asc', nulls: 'first' } },
+          { createdAt: 'asc' },
+        ],
+        take: this.config.paymentMonitor.batchSize,
+      });
+      if (intents.length === 0) {
+        return true;
+      }
+
       const scanned = await this.mapLimited(intents, async (intent) => {
         const knownByTxid = new Map<string, KnownChainTransaction>();
         for (const { transaction } of intent.utxos) {
@@ -155,6 +239,7 @@ export class PaymentsMonitor
           },
         );
       }
+      return true;
     } finally {
       await this.releaseLease(
         providerConfig.chain,
@@ -162,6 +247,28 @@ export class PaymentsMonitor
         leaseOwner,
       );
     }
+  }
+
+  private recordProviderSuccess(chain: Chain): void {
+    const now = new Date();
+    const previous = this.providerChecks.get(chain);
+    this.providerChecks.set(chain, {
+      state: 'ready',
+      lastCheckedAt: now,
+      lastSuccessAt: now,
+      lastFailureAt: previous?.lastFailureAt ?? null,
+    });
+  }
+
+  private recordProviderFailure(chain: Chain): void {
+    const now = new Date();
+    const previous = this.providerChecks.get(chain);
+    this.providerChecks.set(chain, {
+      state: 'degraded',
+      lastCheckedAt: now,
+      lastSuccessAt: previous?.lastSuccessAt ?? null,
+      lastFailureAt: now,
+    });
   }
 
   private providerFor(config: ChainProviderConfig): UtxoChainProvider {

@@ -10,8 +10,18 @@ import {
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  formatReleaseFailures,
+  validateReleaseConfiguration,
+} from './check-release.mjs';
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const { failures: releaseFailures } = await validateReleaseConfiguration();
+if (releaseFailures.length > 0) {
+  throw new Error(
+    `Release configuration is blocked:\n${formatReleaseFailures(releaseFailures)}`,
+  );
+}
 const release = JSON.parse(
   await readFile(join(projectRoot, 'config', 'release.json'), 'utf8'),
 );
@@ -100,6 +110,20 @@ if (network.chainId !== expectedChainId) {
     `RPC chain ID ${network.chainId} does not match approved release chain ID ${expectedChainId}.`,
   );
 }
+const [ownerCode, treasuryCode] = await Promise.all([
+  provider.getCode(owner),
+  provider.getCode(treasury),
+]);
+if (ownerCode === '0x') {
+  throw new Error(
+    'ownerMultisig has no contract code on the approved target chain.',
+  );
+}
+if (treasuryCode === '0x') {
+  throw new Error(
+    'treasuryMultisig has no contract code on the approved target chain.',
+  );
+}
 
 console.log(`Network: ${release.chain} (${network.chainId})`);
 console.log(`Deployer: ${deployer.address}`);
@@ -144,6 +168,9 @@ const deployment = {
   transactionHash: receipt.hash,
   blockNumber: receipt.blockNumber,
   deployer: deployer.address,
+  plannedSaleMode: release.saleMode,
+  plannedAllowlistRoot:
+    release.saleMode === 'allowlist' ? release.allowlistRoot : null,
   constructorArguments: {
     owner,
     treasury,
@@ -175,7 +202,10 @@ const publicMintConfig = {
   contractAddress: deployment.address,
   mintPriceWei: mintPrice.toString(),
   blockExplorerUrl: release.blockExplorerUrl.replace(/\/+$/, ''),
-  allowlistUrl: 'nft/allowlist/generated.json',
+  allowlistUrl:
+    release.saleMode === 'allowlist'
+      ? 'nft/allowlist/generated.json'
+      : null,
 };
 const publicMintConfigPath = join(projectRoot, 'mint-config.js');
 await writeFile(

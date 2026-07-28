@@ -6,6 +6,8 @@
   "evmVersion": "cancun",
   "mintPriceNative": null,
   "maxPerWallet": 1,
+  "saleMode": null,
+  "allowlistRoot": null,
   "secondaryRoyaltyBps": 0,
   "ownerMultisig": null,
   "treasuryMultisig": null,

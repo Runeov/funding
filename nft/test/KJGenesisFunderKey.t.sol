@@ -19,6 +19,7 @@ contract KJGenesisFunderKeyTest {
     address payable private constant TREASURY = payable(address(0xBEEF));
     address private constant FOUNDER = address(0xF01);
     address private constant OTHER = address(0x0B0B);
+    address private constant THIRD = address(0xC0DE);
     uint256 private constant MINT_PRICE = 0.05 ether;
     bytes32 private constant ARTWORK_HASH =
         0x5a1fc50ecc9ea926297e38824f1b86ae21b97910711d5a2664ab5fb7264cd331;
@@ -35,6 +36,59 @@ contract KJGenesisFunderKeyTest {
         _assertEq(key.artProvenanceHash(), ARTWORK_HASH);
     }
 
+    function testSaleStartsClosedAndCannotMintUntilOwnerOpensIt() public {
+        KJGenesisFunderKey key = _deploy(1);
+
+        _assertEq(uint256(key.salePhase()), 0);
+        vm.deal(FOUNDER, MINT_PRICE);
+        vm.prank(FOUNDER);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                KJGenesisFunderKey.SaleNotActive.selector,
+                KJGenesisFunderKey.SalePhase.Public,
+                KJGenesisFunderKey.SalePhase.Closed
+            )
+        );
+        key.publicMint{ value: MINT_PRICE }(1);
+    }
+
+    function testOnlyOwnerCanChangeReleaseControls() public {
+        KJGenesisFunderKey key = _deploy(1);
+
+        vm.prank(OTHER);
+        vm.expectRevert();
+        key.setSalePhase(KJGenesisFunderKey.SalePhase.Public);
+
+        vm.prank(OTHER);
+        vm.expectRevert();
+        key.setAllowlistRoot(bytes32(uint256(1)));
+
+        vm.prank(OTHER);
+        vm.expectRevert();
+        key.pause();
+
+        _assertEq(uint256(key.salePhase()), 0);
+        _assertEq(key.allowlistRoot(), bytes32(0));
+    }
+
+    function testOwnershipTransferRequiresPendingOwnerAcceptance() public {
+        KJGenesisFunderKey key = _deploy(1);
+
+        vm.prank(OWNER);
+        key.transferOwnership(OTHER);
+        _assertEq(key.owner(), OWNER);
+        _assertEq(key.pendingOwner(), OTHER);
+
+        vm.prank(FOUNDER);
+        vm.expectRevert();
+        key.acceptOwnership();
+
+        vm.prank(OTHER);
+        key.acceptOwnership();
+        _assertEq(key.owner(), OTHER);
+        _assertEq(key.pendingOwner(), address(0));
+    }
+
     function testDeploymentRejectsZeroMintPrice() public {
         vm.expectRevert(KJGenesisFunderKey.InvalidMintPrice.selector);
         new KJGenesisFunderKey(
@@ -47,6 +101,48 @@ contract KJGenesisFunderKeyTest {
             "ipfs://unrevealed/collection.json",
             ARTWORK_HASH
         );
+    }
+
+    function testDeploymentRejectsRoyaltyAboveTenPercent() public {
+        vm.expectRevert(KJGenesisFunderKey.RoyaltyTooHigh.selector);
+        new KJGenesisFunderKey(
+            OWNER,
+            TREASURY,
+            MINT_PRICE,
+            1,
+            1_001,
+            "ipfs://unrevealed/metadata.json",
+            "ipfs://unrevealed/collection.json",
+            ARTWORK_HASH
+        );
+    }
+
+    function testSecondaryRoyaltyRoutesToImmutableTreasury() public {
+        KJGenesisFunderKey key = new KJGenesisFunderKey(
+            OWNER,
+            TREASURY,
+            MINT_PRICE,
+            1,
+            500,
+            "ipfs://unrevealed/metadata.json",
+            "ipfs://unrevealed/collection.json",
+            ARTWORK_HASH
+        );
+
+        (address receiver, uint256 royaltyAmount) = key.royaltyInfo(1, 1 ether);
+        _assertEq(receiver, TREASURY);
+        _assertEq(royaltyAmount, 0.05 ether);
+    }
+
+    function testAllowlistPhaseCannotMintWithoutPublishedRoot() public {
+        KJGenesisFunderKey key = _deploy(1);
+        vm.prank(OWNER);
+        key.setSalePhase(KJGenesisFunderKey.SalePhase.Allowlist);
+
+        vm.deal(FOUNDER, MINT_PRICE);
+        vm.prank(FOUNDER);
+        vm.expectRevert(KJGenesisFunderKey.AllowlistRootMissing.selector);
+        key.allowlistMint{ value: MINT_PRICE }(1, 1, new bytes32[](0));
     }
 
     function testAllowlistRequiresProofAllocationAndExactPrice() public {
@@ -90,6 +186,29 @@ contract KJGenesisFunderKeyTest {
         key.allowlistMint{ value: MINT_PRICE }(1, allocation, proof);
     }
 
+    function testMultiLeafAllowlistMatchesSortedPairProofFormat() public {
+        KJGenesisFunderKey key = _deploy(1);
+        bytes32 founderLeaf = _allowlistLeaf(FOUNDER, 1);
+        bytes32 otherLeaf = _allowlistLeaf(OTHER, 1);
+        bytes32 thirdLeaf = _allowlistLeaf(THIRD, 1);
+        bytes32 firstPair = _hashPair(founderLeaf, otherLeaf);
+        bytes32 root = _hashPair(firstPair, thirdLeaf);
+        bytes32[] memory proof = new bytes32[](2);
+        proof[0] = founderLeaf;
+        proof[1] = thirdLeaf;
+
+        vm.prank(OWNER);
+        key.setAllowlistRoot(root);
+        vm.prank(OWNER);
+        key.setSalePhase(KJGenesisFunderKey.SalePhase.Allowlist);
+
+        vm.deal(OTHER, MINT_PRICE);
+        vm.prank(OTHER);
+        key.allowlistMint{ value: MINT_PRICE }(1, 1, proof);
+
+        _assertEq(key.ownerOf(1), OTHER);
+    }
+
     function testPublicMintEnforcesPerWalletLimit() public {
         KJGenesisFunderKey key = _deploy(1);
         vm.prank(OWNER);
@@ -99,6 +218,32 @@ contract KJGenesisFunderKeyTest {
         vm.prank(FOUNDER);
         key.publicMint{ value: MINT_PRICE }(1);
 
+        vm.prank(FOUNDER);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                KJGenesisFunderKey.PerWalletLimitExceeded.selector, 2, 1
+            )
+        );
+        key.publicMint{ value: MINT_PRICE }(1);
+    }
+
+    function testEligibilityFollowsTokenWhileMintAllowanceDoesNotReset() public {
+        KJGenesisFunderKey key = _deploy(1);
+        vm.prank(OWNER);
+        key.setSalePhase(KJGenesisFunderKey.SalePhase.Public);
+
+        vm.deal(FOUNDER, MINT_PRICE);
+        vm.prank(FOUNDER);
+        key.publicMint{ value: MINT_PRICE }(1);
+        vm.prank(FOUNDER);
+        key.transferFrom(FOUNDER, OTHER, 1);
+
+        _assertTrue(!key.isFunder(FOUNDER));
+        _assertTrue(key.isFunder(OTHER));
+        _assertEq(key.mintedByWallet(FOUNDER), 1);
+        _assertEq(key.mintedByWallet(OTHER), 0);
+
+        vm.deal(FOUNDER, MINT_PRICE);
         vm.prank(FOUNDER);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -213,6 +358,12 @@ contract KJGenesisFunderKeyTest {
         returns (bytes32)
     {
         return keccak256(bytes.concat(keccak256(abi.encode(account, allocation))));
+    }
+
+    function _hashPair(bytes32 left, bytes32 right) private pure returns (bytes32) {
+        return left < right
+            ? keccak256(bytes.concat(left, right))
+            : keccak256(bytes.concat(right, left));
     }
 
     function _assertEq(uint256 actual, uint256 expected) private pure {
